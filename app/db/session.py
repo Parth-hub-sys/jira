@@ -7,10 +7,10 @@ from app.core.config import settings
 
 database_url = make_url(settings.database_url)
 
-if database_url.drivername == "postgresql":
+if database_url.drivername in {"postgres", "postgresql"}:
     database_url = database_url.set(drivername="postgresql+asyncpg")
 
-engine = create_async_engine(database_url, echo=True)
+engine = create_async_engine(database_url, pool_pre_ping=True)
 SessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 async def get_db() -> AsyncIterator[AsyncSession]:

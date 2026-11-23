@@ -1,0 +1,14 @@
+* { box-sizing: border-box; }
+body { min-width: 320px; margin: 0; min-height: 100vh; }
+button, input, textarea, select { font: inherit; color: inherit; min-width: 0; }
+button { cursor: pointer; border: 0; background: none; }
+button:disabled { cursor: not-allowed; opacity: .56; }
+button svg, .input-icon svg { flex: none; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+main:focus { outline: none; }
+p, h1, h2, h3, dl { margin: 0; }
+.muted { color: var(--muted); }
+.skip-link { position: fixed; z-index: 20; top: 8px; left: 8px; transform: translateY(-150%); background: var(--surface); padding: 10px 16px; border-radius: 10px; }
+.skip-link:focus { transform: none; }
+
+.app { min-height: 100vh; background: var(--canvas-gradient), var(--canvas); }

@@ -1,14 +1,17 @@
 import uuid
 
 
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy import (
+    BigInteger,
     UUID,
     DateTime,
     ForeignKey,
+    Index,
     String,
     UniqueConstraint,
+    func,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -16,6 +19,13 @@ from app.db.base import Base
 
 class Task(Base):
     __tablename__ = "tasks"
+    __table_args__ = (
+        UniqueConstraint("project_id", "number", name="uq_tasks_project_number"),
+        Index("ix_tasks_project_status", "project_id", "status"),
+    )
+    number: Mapped[int] = mapped_column(BigInteger)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     
 
@@ -36,7 +46,7 @@ class Task(Base):
     )
 
 
-    description : Mapped[str] = mapped_column(
+    description : Mapped[str | None] = mapped_column(
         String(500),
         nullable = True
     )
@@ -56,19 +66,19 @@ class Task(Base):
     )
 
 
-    reporter_id : Mapped[uuid.UUID] = mapped_column(
+    reporter_id : Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="RESTRICT"),
         nullable = True
     )
 
-    assignee_id : Mapped[uuid.UUID] = mapped_column(
+    assignee_id : Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable = True
     )
 
-    due_at : Mapped[datetime] = mapped_column(
+    due_at : Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable = True
     )

@@ -1,0 +1,59 @@
+.page-width { width: min(100% - 68px, 1460px); margin-inline: auto; }
+.topbar { min-height: 79px; display: flex; align-items: center; gap: 14px; padding-block: 12px; }
+.brand { display: inline-flex; align-items: center; gap: 10px; font-size: 1.55rem; font-weight: 820; letter-spacing: -.07em; padding: 0; }
+.brand-mark {
+  display: grid; place-items: center; color: var(--accent-ink); width: 40px; height: 40px; border-radius: 13px;
+  background: linear-gradient(145deg, var(--accent), var(--accent-hover));
+  box-shadow: 0 5px 13px var(--line), inset 0 1px 0 var(--edge);
+}
+.top-divider { width: 1px; height: 26px; background: var(--line); opacity: .7; }
+.workspace-picker .dropdown-trigger, .project-picker .dropdown-trigger { max-width: min(230px,100%); }
+.workspace-picker .dropdown-trigger { border-color: transparent; background: transparent; }
+.workspace-initial, .project-symbol { flex: none; width: 27px; height: 27px; display: grid; place-items: center; border-radius: 8px; background: var(--glass); color: var(--ink-soft); font-weight: 800; font-size: .74rem; }
+.top-spacer { flex: 1; }
+.search-trigger { min-width: 231px; height: 43px; display: flex; align-items: center; gap: 10px; color: var(--ink-soft); padding: 0 9px 0 13px; background: var(--glass); border: 1px solid var(--edge); border-radius: 13px; text-align: left; }
+.search-trigger kbd { margin-left: auto; font: 660 .72rem 'DM Sans Variable', sans-serif; color: var(--muted); background: var(--tint); padding: 4px 5px; border: 1px solid var(--line); border-radius: 5px; white-space: nowrap; }
+.demo-tag { min-height: 42px; white-space: nowrap; padding: 0 6px; color: var(--ink-soft); font-size: .83rem; font-weight: 790; }
+.demo-tag span { font-weight: 610; }
+.icon-button { position: relative; display: inline-grid; place-items: center; width: 43px; height: 43px; padding: 0; border-radius: 12px; color: var(--ink-soft); background: var(--glass); border: 1px solid var(--edge); flex: none; }
+.icon-button:hover, .search-trigger:hover { background: var(--glass-strong); }
+.theme-toggle { border-radius: 50%; }
+.profile { position: relative; }
+.profile-trigger { display: flex; align-items: center; gap: 7px; padding: 0; color: var(--ink-soft); }
+.avatar { width: 38px; height: 38px; display: inline-grid; flex: none; place-items: center; border-radius: 50%; font-size: .77rem; font-weight: 800; background: var(--honey-wash); color: var(--honey-ink); box-shadow: 0 0 0 2px var(--edge); }
+.avatar-1 { background: var(--clay-wash); color: var(--clay-ink); }
+.avatar-2 { background: var(--jade-wash); color: var(--jade-ink); }
+.avatar-3 { background: var(--tint-strong); color: var(--ink-soft); }
+.avatar.small { width: 29px; height: 29px; font-size: .69rem; }
+.profile-trigger > svg { transition: transform 180ms var(--ease); }
+.profile-trigger[aria-expanded=true] > svg { transform: rotate(180deg); }
+.profile-menu { position: absolute; z-index: 5; top: calc(100% + 12px); right: 0; display: grid; gap: 3px; width: min(232px,calc(100vw - 26px)); border: 1px solid var(--line); border-radius: 16px; padding: 15px; background: var(--glass-strong); box-shadow: var(--shadow); transform-origin: top right; opacity: 0; transform: translateY(-6px) scale(.98); visibility: hidden; pointer-events: none; transition: opacity 170ms var(--ease), transform 170ms var(--ease), visibility 170ms; }
+.profile-menu[data-open=true] { opacity: 1; transform: none; visibility: visible; pointer-events: auto; transition: opacity 170ms var(--ease), transform 170ms var(--ease); }
+.profile-menu > span { overflow-wrap: anywhere; }
+.profile-menu button { display: flex; align-items: center; gap: 9px; margin-top: 8px; padding: 10px; border-radius: 9px; background: var(--tint); text-align: left; font-weight: 700; }
+
+.layout { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 24px; align-items: start; padding: 10px 0 38px; }
+.rail-slot { position: sticky; top: 21px; margin-top: 6px; }
+.rail { display: grid; gap: 6px; padding: 9px 8px; border: 1px solid var(--rail-border); border-radius: 28px; background: var(--rail); box-shadow: var(--raised-shadow); }
+.rail button { display: grid; justify-items: center; align-content: center; gap: 5px; height: 57px; border-radius: 15px; color: var(--rail-ink); font-size: .8rem; font-weight: 670; padding: 0; transition: background 150ms, color 150ms; }
+.rail button:hover { background: var(--rail-hover); }
+.rail button[aria-current] { background: var(--rail-selected); color: var(--rail-selected-ink); font-weight: 800; }
+.main { min-width: 0; min-height: min(690px, 88vh); }
+.project-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 44px; margin-bottom: 22px; }
+.project-picker .dropdown-trigger { padding-left: 7px; border-color: var(--edge); }
+.project-symbol { background: var(--tint); color: var(--ink-soft); }
+.button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; border-radius: 11px; min-height: 41px; padding: 0 14px; font-weight: 760; font-size: .9rem; white-space: nowrap; transition: background 150ms, box-shadow 150ms, transform 150ms; }
+.button:active:not(:disabled) { transform: translateY(1px); }
+.button.primary { color: var(--accent-ink); background: var(--accent); border: 1px solid var(--accent); border-radius: 999px; box-shadow: 0 5px 12px -6px var(--line); }
+.button.primary:hover:not(:disabled) { background: var(--accent-hover); }
+.button.secondary { border: 1px solid var(--line); background: var(--glass-strong); color: var(--ink-soft); }
+.button.secondary:hover:not(:disabled) { background: var(--tint-strong); }
+.button.secondary.toggled, .button.secondary.toggled:hover:not(:disabled) {
+  background: var(--control-active);
+  border-color: var(--control-active);
+  color: var(--control-ink);
+}
+.button.danger { color: var(--error); margin-right: auto; }
+.new-task { min-height: 44px; padding-inline: 15px; }
+.text-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: fit-content; min-height: 39px; padding: 0; color: var(--ink-soft); font-weight: 800; font-size: .87rem; }
+.text-button:hover { text-decoration: underline; text-underline-offset: 4px; }

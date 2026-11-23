@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 import uuid
 from sqlalchemy import(
@@ -6,7 +6,7 @@ from sqlalchemy import(
     DateTime,
     ForeignKey,
     String,
-    UniqueConstraint,
+    Index,
 )
 
 from sqlalchemy.orm import Mapped, mapped_column
@@ -15,6 +15,9 @@ from app.db.base import Base
 
 class activity_log(Base):
     __tablename__ = "activity_logs"
+    __table_args__ = (
+        Index("ix_activity_logs_entity_created", "entity_type", "entity_id", "created_at"),
+    )
 
     id : Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -39,7 +42,7 @@ class activity_log(Base):
         nullable = False
     )
 
-    details : Mapped[str] = mapped_column(
+    details : Mapped[str | None] = mapped_column(
         String(500),
         nullable = True
     )
@@ -47,5 +50,5 @@ class activity_log(Base):
     created_at : Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable = False,
-        default = datetime.utcnow
+        default=lambda: datetime.now(timezone.utc),
     )

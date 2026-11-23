@@ -15,6 +15,7 @@ from app.db.base import Base
 
 class Label(Base):
     __tablename__ = "labels"
+    __table_args__ = (UniqueConstraint("project_id", "name", name="uq_labels_project_name"),)
 
     id : Mapped[uuid.UUID] = mapped_column(
 

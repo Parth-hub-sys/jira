@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 import uuid
 from sqlalchemy import(
@@ -6,7 +6,7 @@ from sqlalchemy import(
     DateTime,
     ForeignKey,
     String,
-    UniqueConstraint,
+    Index,
 )
 
 from sqlalchemy.orm import Mapped, mapped_column
@@ -15,6 +15,7 @@ from app.db.base import Base
 
 class Comment(Base):
     __tablename__ = "comments"
+    __table_args__ = (Index("ix_comments_task_created", "task_id", "created_at"),)
 
     id : Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -39,8 +40,8 @@ class Comment(Base):
         nullable = False
     )
 
-    created_at : Mapped[DateTime] = mapped_column(
+    created_at : Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(datetime.timezone.utc),
+        default=lambda: datetime.now(timezone.utc),
         nullable=False
     )

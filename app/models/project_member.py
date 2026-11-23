@@ -7,7 +7,6 @@ from sqlalchemy import (
     ForeignKey,
     String,
 
-    UniqueConstraint,
 )
 
 from sqlalchemy.orm import Mapped, mapped_column
@@ -15,14 +14,6 @@ from app.db.base import Base
 
 class ProjectMember(Base):
     __tablename__ = "project_members"
-
-    __table_agrs__ = (
-        UniqueConstraint(
-            "project_id",
-            "user_id",
-            name = "uq_project_member_project_id_user_id"
-        )
-    )
 
     project_id : Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid = True),

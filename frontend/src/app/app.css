@@ -1,0 +1,5 @@
+::view-transition { pointer-events: none; }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 240ms; animation-timing-function: var(--ease); }
+.workspace-primary { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.session-loading { display: grid; place-content: center; justify-items: center; gap: 12px; }
+.session-loading > span:last-child { color: var(--muted); }

@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ebe8de" />
+    <meta name="description" content="Fluztech keeps your team's projects and tasks in view." />
+    <title>Fluztech · Project workspace</title>
+    <script>
+      try {
+        const theme = localStorage.getItem('fluztech.theme');
+        document.documentElement.dataset.theme = theme === 'dark' ? 'dark' : 'light';
+        if (theme === 'dark') document.querySelector('meta[name="theme-color"]').content = '#141714';
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
