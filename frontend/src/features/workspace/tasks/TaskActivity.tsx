@@ -1,6 +1,5 @@
 import { FormError } from '../../../shared/ui'
 import { longDate } from '../../../shared/lib/date'
-import type { Mode } from '../api'
 import type { Activity } from '../model'
 import { useTaskFeed } from './useTaskFeed'
 
@@ -12,12 +11,11 @@ const actionLabels: Record<string, string> = {
   'task.unassigned': 'removed its assignee',
 }
 
-export function TaskActivity({ mode, taskPath, name }: {
-  mode: Mode
+export function TaskActivity({ taskPath, name }: {
   taskPath: string
   name(userId: string): string | undefined
 }) {
-  const { page, loading, error, loadMore, retry } = useTaskFeed<Activity>(mode, taskPath + '/activity')
+  const { page, loading, error, loadMore, retry } = useTaskFeed<Activity>(taskPath + '/activity')
 
   return <div className="activity-list">
     {!page && loading && <p className="muted" role="status">Loading activity…</p>}

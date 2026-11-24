@@ -69,9 +69,6 @@ class MemberRead(FromDatabase):
 
 class ProjectCreate(Input):
     name: Name
-    key: Annotated[
-        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50, pattern=r"^[A-Za-z][A-Za-z0-9]*$")
-    ]
     description: Annotated[str, Field(max_length=1000)] | None = None
 
 
@@ -84,7 +81,6 @@ class ProjectRead(FromDatabase):
     id: UUID
     organization_id: UUID
     name: str
-    key: str
     description: str | None
     created_by: UUID | None
     created_at: ISTDateTime

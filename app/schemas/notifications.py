@@ -11,6 +11,16 @@ class NotificationUpdate(Input):
     read: Literal[True] = True
 
 
+class NotificationBulkUpdate(Input):
+    operation_id: UUID | None = None
+
+
+class NotificationBulkRead(FromDatabase):
+    notification_ids: list[UUID]
+    updated_count: int
+    read_at: ISTDateTime
+
+
 class NotificationRead(FromDatabase):
     id: UUID
     type: str

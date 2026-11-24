@@ -1,22 +1,20 @@
 import { useEffect, useState } from 'react'
-import { CalendarDays, Check, CircleDot, Flag, MessageSquare, Tags } from 'lucide-react'
+import { CalendarDays, CircleDot, Flag, MessageSquare } from 'lucide-react'
 import { Dialog, Dropdown, FormError } from '../../../shared/ui'
 import { messageOf } from '../../../shared/lib/text'
 import { request } from '../api'
-import type { Mode } from '../api'
 import { statusNames, transitions } from '../model'
-import type { Label, PendingTaskMove, Status, Task, Workspace } from '../model'
+import type { PendingTaskMove, Status, Task, Workspace } from '../model'
 import { CommentThread } from './CommentThread'
 import { TaskActivity } from './TaskActivity'
 import { TaskForm } from './TaskForm'
 import { DueDate, PriorityPill, StatusPill, statusIcons } from './TaskIndicators'
 
-export function TaskDrawer({ id, workspace, mode, canWrite, canModerate, pendingMove, onMove, onClose, onUpdate, onTaskLabels }: {
-  id: string; workspace: Workspace; mode: Mode; canWrite: boolean; canModerate: boolean
+export function TaskDrawer({ id, workspace, canWrite, canModerate, pendingMove, onMove, onClose, onUpdate }: {
+  id: string; workspace: Workspace; canWrite: boolean; canModerate: boolean
   pendingMove?: PendingTaskMove
   onMove(task: Task, status: Status): Promise<Task | undefined>
   onClose(): void; onUpdate(task: Task, fromRead?: boolean): void
-  onTaskLabels(task: Task, labels: Label[]): void
 }) {
   const [loaded, setLoaded] = useState<Task>()
   const [loadError, setLoadError] = useState('')
@@ -25,8 +23,6 @@ export function TaskDrawer({ id, workspace, mode, canWrite, canModerate, pending
   const [activityRevision, setActivityRevision] = useState(0)
   const [lastOpenedActivity, setLastOpenedActivity] = useState<string>()
   const [editing, setEditing] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
   const [moveError, setMoveError] = useState('')
   const task = workspace.tasks.find(item => item.id === id) ?? loaded
   const writable = canWrite && loaded?.project_id === workspace.project?.id
@@ -37,7 +33,7 @@ export function TaskDrawer({ id, workspace, mode, canWrite, canModerate, pending
   const taskPath = `/tasks/${encodeURIComponent(id)}`
   useEffect(() => {
     let active = true
-    request<Task>(mode, taskPath)
+    request<Task>(taskPath)
       .then(item => {
         if (!active) return
         setLoaded(item)
@@ -45,16 +41,11 @@ export function TaskDrawer({ id, workspace, mode, canWrite, canModerate, pending
       })
       .catch(failure => { if (active) setLoadError(messageOf(failure)) })
     return () => { active = false }
-  }, [mode, taskPath, attempt, onUpdate])
+  }, [taskPath, attempt, onUpdate])
   function update(next: Task) {
     setLoaded(next)
     onUpdate(next)
     setActivityRevision(current => current + 1)
-  }
-  async function change(action: () => Promise<void>) {
-    setBusy(true)
-    setError('')
-    try { await action() } catch (failure) { setError(messageOf(failure)) } finally { setBusy(false) }
   }
   return <Dialog title="Task details" drawer onClose={onClose}>
     {loadError ? <div className="drawer-body">
@@ -67,7 +58,7 @@ export function TaskDrawer({ id, workspace, mode, canWrite, canModerate, pending
         const changed = fields.filter(field => values[field] !== task[field])
         if (changed.length) {
           const data = Object.fromEntries(changed.map(field => [field, values[field]]))
-          update(await request<Task>(mode, taskPath, { method: 'PATCH', data }))
+          update(await request<Task>(taskPath, { method: 'PATCH', data }))
         }
         setEditing(false)
       }} /> : <>
@@ -76,7 +67,7 @@ export function TaskDrawer({ id, workspace, mode, canWrite, canModerate, pending
             <StatusPill status={task.status} />
             <span className="task-saving" role="status">{pendingMove && <><span className="spinner" />Saving status…</>}</span>
           </div>
-          {writable && <button className="button secondary" disabled={busy || !!pendingMove} onClick={() => setEditing(true)}>Edit task</button>}
+          {writable && <button className="button secondary" disabled={!!pendingMove} onClick={() => setEditing(true)}>Edit task</button>}
         </div>
         <FormError error={moveError} />
         <dl className="task-facts">
@@ -84,7 +75,7 @@ export function TaskDrawer({ id, workspace, mode, canWrite, canModerate, pending
           <div><dt>Assignee</dt><dd>{name(task.assignee_id) ?? 'Unassigned'}</dd></div>
           <div><dt><CalendarDays size={15} />Due date</dt><dd><DueDate value={task.due_at} status={task.status} /></dd></div>
           {writable && <div><dt><CircleDot size={15} />Move to</dt><dd>
-            <Dropdown label="Change task status" placeholder="Select status" disabled={busy || !!pendingMove}
+            <Dropdown label="Change task status" placeholder="Select status" disabled={!!pendingMove}
               options={(transitions[task.status] ?? []).map(status => {
                 const Icon = statusIcons[status]
                 return { value: status, label: statusNames[status], icon: <Icon size={16} /> }
@@ -97,18 +88,6 @@ export function TaskDrawer({ id, workspace, mode, canWrite, canModerate, pending
           </dd></div>}
         </dl>
         <h3>Description</h3><p className="task-description muted">{task.description || 'No description.'}</p>
-        {workspace.labels.some(label => writable || task.label_ids.includes(label.id)) && task.project_id === workspace.project?.id && <section><h3><Tags size={16} /> Labels</h3><div className="task-labels">
-          {workspace.labels.filter(label => writable || task.label_ids.includes(label.id)).map(label => {
-            const selected = task.label_ids.includes(label.id)
-            return <button className={`task-label ${selected ? 'selected-label' : ''}`} aria-pressed={selected} type="button" disabled={!writable || busy || !!pendingMove} key={label.id} onClick={() => void change(async () => {
-              const ids = selected ? task.label_ids.filter(item => item !== label.id) : [...task.label_ids, label.id]
-              const saved = await request<Label[]>(mode, taskPath + '/labels', { method: 'PUT', data: { label_ids: ids } })
-              onTaskLabels(task, saved)
-              setActivityRevision(current => current + 1)
-            })}>{selected && <Check size={12} />}{label.name}</button>
-          })}
-        </div></section>}
-        <FormError error={error} />
       </>}
       <div hidden={editing}>
         <div className="segmented drawer-tabs">
@@ -119,10 +98,10 @@ export function TaskDrawer({ id, workspace, mode, canWrite, canModerate, pending
           <button aria-pressed={tab === 'activity'} onClick={() => setTab('activity')}>Activity</button>
         </div>
         <div hidden={tab !== 'comments'}>
-          <CommentThread mode={mode} taskPath={taskPath} userId={workspace.user.id} writable={writable} canModerate={canModerate} name={name} />
+          <CommentThread taskPath={taskPath} userId={workspace.user.id} writable={writable} canModerate={canModerate} name={name} />
         </div>
         <div hidden={tab !== 'activity'}>
-          {(tab === 'activity' || lastOpenedActivity === activityKey) && <TaskActivity key={activityKey} mode={mode} taskPath={taskPath} name={name} />}
+          {(tab === 'activity' || lastOpenedActivity === activityKey) && <TaskActivity key={activityKey} taskPath={taskPath} name={name} />}
         </div>
       </div>
     </div>}

@@ -49,15 +49,19 @@ def invalid_credentials() -> HTTPException:
     return HTTPException(401, "Invalid credentials", headers={"WWW-Authenticate": "Bearer"})
 
 
-def access_token_user_id(token: str) -> UUID:
+def access_token_identity(token: str) -> tuple[UUID, int]:
     try:
         payload = jwt.decode(
             token, jwt_key(), algorithms=["HS256"], issuer=ISSUER,
             options={"require": ["sub", "iss", "iat", "exp"]},
         )
-        return UUID(payload["sub"])
+        return UUID(payload["sub"]), int(payload["exp"])
     except (jwt.InvalidTokenError, ValueError) as error:
         raise invalid_credentials() from error
+
+
+def access_token_user_id(token: str) -> UUID:
+    return access_token_identity(token)[0]
 
 
 def hash_refresh_token(token: str) -> str:

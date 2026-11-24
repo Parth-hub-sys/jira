@@ -1,9 +1,8 @@
 import { matchesTask, statuses } from '../model'
-import type { PendingTaskMove, Status, Task, Workspace } from '../model'
+import type { PendingTaskMove, Status, Task, WorkFilters, Workspace } from '../model'
 import { TaskBoard } from './TaskBoard'
 import { TaskList } from './TaskList'
 import { WorkFilterBar } from './WorkFilters'
-import type { WorkFilters } from './WorkFilters'
 import { WorkSummary } from './WorkSummary'
 
 type Props = {
@@ -15,13 +14,12 @@ type Props = {
   setFilters(filters: WorkFilters): void
   onViewChange?(board: boolean): void
   openTask(id: string): void
-  openLabels(): void
   moveTask(task: Task, status: Status): void | Promise<void>
   onCreate(): void
 }
 
 export function WorkView({
-  workspace, board, filters, setFilters, onViewChange, openTask, openLabels, moveTask, onCreate, canWrite, pendingMoves,
+  workspace, board, filters, setFilters, onViewChange, openTask, moveTask, onCreate, canWrite, pendingMoves,
 }: Props) {
   const matchesStatus = (status: Status) => {
     if (filters.status === 'open') return status !== 'done'
@@ -30,10 +28,9 @@ export function WorkView({
   const tasks = workspace.tasks.filter(task =>
     matchesTask(task, filters.query) &&
     (!filters.priority || task.priority === filters.priority) &&
-    (!filters.label || task.label_ids.includes(filters.label)) &&
     matchesStatus(task.status) &&
     (!filters.mine || task.assignee_id === workspace.user.id))
-  const activeFilter = Boolean(filters.query || filters.priority || filters.status || filters.label || filters.mine)
+  const activeFilter = Boolean(filters.query || filters.priority || filters.status || filters.mine)
   const savingCount = pendingMoves.size && workspace.tasks.filter(task => pendingMoves.has(task.id)).length
 
   return (
@@ -49,14 +46,13 @@ export function WorkView({
         </span>
       </div>
 
-      <WorkFilterBar board={board} filters={filters} labels={workspace.labels} setFilters={setFilters} openLabels={openLabels} onViewChange={onViewChange} />
+      <WorkFilterBar board={board} filters={filters} activeFilter={activeFilter} setFilters={setFilters} onViewChange={onViewChange} />
 
       {board ? (
         <TaskBoard
           lanes={statuses.filter(matchesStatus)}
           tasks={tasks}
           members={workspace.projectMembers}
-          labels={workspace.labels}
           canWrite={canWrite}
           isMoving={id => pendingMoves.has(id)}
           openTask={openTask}

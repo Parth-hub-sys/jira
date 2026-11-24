@@ -1,8 +1,6 @@
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, HTTPException
-from sqlalchemy import func, select
-
 from app.api.dependencies import CurrentUser, Database, Page
 from app.models import Project, ProjectMember
 from app.schemas.organizations import MemberRead, ProjectCreate, ProjectMemberWrite, ProjectRead, ProjectUpdate
@@ -23,20 +21,16 @@ async def list_projects(org_id: UUID, user: CurrentUser, db: Database, page: Pag
 @router.post("/organizations/{org_id}/projects", status_code=201, response_model=ProjectRead)
 async def create_project(org_id: UUID, payload: ProjectCreate, user: CurrentUser, db: Database):
     await organization_access(db, org_id, user.id, manage=True)
-    key = payload.key.upper()
-    existing = await db.scalar(
-        select(Project.id).where(Project.organization_id == org_id, func.upper(Project.key) == key).limit(1)
-    )
-    if existing is not None:
-        raise HTTPException(409, "Project key already exists in this organization")
+    project_id = uuid4()
     project = Project(
+        id=project_id,
         organization_id=org_id,
         created_by=user.id,
         name=payload.name,
-        key=key,
+        key=f"P{project_id.hex[:12].upper()}",
         description=payload.description,
     )
-    async with handle_unique_conflict(db, "Project key already exists in this organization"):
+    async with handle_unique_conflict(db, "Could not allocate a project reference. Try creating the project again."):
         db.add(project)
         await db.flush()
         db.add(ProjectMember(project_id=project.id, user_id=user.id, role="admin"))

@@ -2,19 +2,17 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Dialog } from '../../../shared/ui'
 import { getOrganization, renameOrganization } from '../api'
-import type { Mode } from '../api'
 import { longDate, messageOf } from '../model'
 import type { Organization } from '../model'
 
 type Props = {
-  mode: Mode
   organizationId: string
   canManage: boolean
   onSaved(organization: Organization): void
   onClose(): void
 }
 
-export function OrganizationDialog({ mode, organizationId, canManage, onSaved, onClose }: Props) {
+export function OrganizationDialog({ organizationId, canManage, onSaved, onClose }: Props) {
   const [organization, setOrganization] = useState<Organization | null>(null)
   const [name, setName] = useState('')
   const [error, setError] = useState('')
@@ -23,13 +21,13 @@ export function OrganizationDialog({ mode, organizationId, canManage, onSaved, o
 
   useEffect(() => {
     let active = true
-    getOrganization(mode, organizationId).then(result => {
+    getOrganization(organizationId).then(result => {
       if (!active) return
       setOrganization(result)
       setName(result.name)
     }).catch(failure => { if (active) setError(messageOf(failure)) })
     return () => { active = false }
-  }, [mode, organizationId, attempt])
+  }, [organizationId, attempt])
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -38,7 +36,7 @@ export function OrganizationDialog({ mode, organizationId, canManage, onSaved, o
     setError('')
     setSaving(true)
     try {
-      const updated = await renameOrganization(mode, organizationId, nextName)
+      const updated = await renameOrganization(organizationId, nextName)
       setOrganization(updated)
       setName(updated.name)
       onSaved(updated)

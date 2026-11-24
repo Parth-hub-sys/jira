@@ -6,12 +6,14 @@ Copy `.env.example` to `.env` for a new setup and set `DATABASE_URL` and `JWT_SE
 uv sync --locked
 uv run alembic upgrade head
 uv run python -m scripts.provision_user --email owner@example.com --name "Company Owner" --organization company --organization-name "Company" --role owner
-uv run uvicorn main:app --reload
+uv run uvicorn main:app --reload --timeout-graceful-shutdown 5
 ```
 
-Open `http://127.0.0.1:8000/docs` for all 35 endpoints. Send `email` and `password` as JSON to `POST /api/v1/auth/login`, then paste the returned `access_token` into Swagger's **Authorize** dialog or send it as an `Authorization: Bearer` header.
+Open `http://127.0.0.1:8000/docs` for the API documentation. Send `email` and `password` as JSON to `POST /api/v1/auth/login`, then paste the returned `access_token` into Swagger's **Authorize** dialog or send it as an `Authorization: Bearer` header.
 
-The Fluztech browser sends `X-Auth-Mode: cookie` to login, refresh, and logout on the same origin. Login and refresh return an access token in JSON and set a rotating HttpOnly, SameSite=Strict refresh cookie scoped to the authentication routes. Logout revokes the refresh token and clears the cookie. Access tokens already issued remain valid until expiration. Swagger and API clients can leave the header blank to use the JSON refresh-token flow.
+The notification stream uses a PostgreSQL listener connection per API worker. Use a direct database connection or a session-mode pooler. The Uvicorn shutdown timeout prevents open streams from delaying a reload.
+
+The Fluxtech browser sends `X-Auth-Mode: cookie` to login, refresh, and logout on the same origin. Login and refresh return an access token in JSON and set a rotating HttpOnly, SameSite=Strict refresh cookie scoped to the authentication routes. Logout revokes the refresh token and clears the cookie. Access tokens already issued remain valid until expiration. Swagger and API clients can leave the header blank to use the JSON refresh-token flow.
 
 Set both required token lifetimes in `.env` as positive whole numbers in minutes. The example gives an access token 15 minutes and a refresh token 7 days.
 
@@ -26,7 +28,7 @@ For a `401 Invalid credentials`, verify that you provisioned the email address i
 
 ## Organizations and members
 
-Use the provisioning command in the setup example to create the first organization and owner. From **Members → Organization**, owners can create another organization. Owners and admins can provision a new login through **Add member** by entering a name, email, initial password, and role.
+Use the provisioning command in the setup example to create the first organization and owner. Owners can create another organization from **Members → Organization settings**. Owners and admins can provision a new login from **Members → Organization members → Add member** by entering a name, email, initial password, and role.
 
 Sign in as an owner or admin and call `GET /api/v1/organizations` to find the organization ID. Then use these routes with the access token.
 
@@ -39,11 +41,11 @@ Sign in as an owner or admin and call `GET /api/v1/organizations` to find the or
 | Add a member by email | `POST /api/v1/organizations/{org_id}/members` with `mode`, `email`, and `role`. Use `"existing"` for an existing account or `"create"` with `name` and `password` for a new account. |
 | Add an existing user or change their role | `PUT /api/v1/organizations/{org_id}/members/{user_id}` with `{"role":"member"}`, `{"role":"admin"}`, or `{"role":"owner"}` |
 | Remove a member | `DELETE /api/v1/organizations/{org_id}/members/{user_id}` |
-| List or create projects | `GET` or `POST /api/v1/organizations/{org_id}/projects`. To create, send `{"name":"Engineering","key":"ENG"}`. |
+| List or create projects | `GET` or `POST /api/v1/organizations/{org_id}/projects`. To create, send `{"name":"Engineering"}` with an optional description. |
 
-Owners and organization admins can manage projects across their organization. Only owners can change who holds the owner role, and the organization must retain an owner. Regular members need project membership to access a project. Project viewers can read, project members can work on tasks, and project admins can also manage members and labels. Assignees must be active project members with write access.
+Owners and organization admins can manage projects across their organization. Only owners can change who holds the owner role, and the organization must retain an owner. Regular members need project membership to access a project. Project viewers can read, project members can work on tasks, and project admins can also manage members. Assignees must be active project members with write access.
 
-Task lists accept `status`, `assignee_id`, `priority`, `label_id`, `q`, `limit`, and `offset`. Tasks start as `pending`, then can move to `in_progress` and `done`. The API also supports moving one step back and retrying the same transition. Task responses include a display key such as `ENG-42` and a UUID for detail routes.
+Task lists accept `status`, `assignee_id`, `priority`, `q`, `limit`, and `offset`. Tasks start as `pending`, then can move to `in_progress` and `done`. The API also supports moving one step back and retrying the same transition. Task responses include a display key such as `ENG-42` and a UUID for detail routes.
 
 The API returns timestamps in India Standard Time with the `+05:30` offset. Task due dates accept timestamps with an explicit timezone offset.
 

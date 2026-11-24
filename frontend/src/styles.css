@@ -4,6 +4,7 @@
 @import './styles/overview.css';
 @import './styles/workspace.css';
 @import './styles/components.css';
-@import './styles/labels-notifications.css';
+@import './styles/notifications.css';
+@import './styles/members.css';
 @import './styles/motion.css';
 @import './styles/responsive.css';

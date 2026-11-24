@@ -187,26 +187,6 @@
   font-size: .9rem;
 }
 
-.sign-in-demo {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0 6px;
-  margin-top: 20px;
-  color: var(--muted, #51584e);
-  font-size: .91rem;
-}
-
-.sign-in-demo button {
-  min-height: 42px;
-  padding: 0 3px;
-  border-radius: 6px;
-  color: var(--sign-callout);
-  font-weight: 760;
-  text-decoration: underline;
-  text-underline-offset: 4px;
-}
-
 .sign-in-art {
   position: relative;
   isolation: isolate;

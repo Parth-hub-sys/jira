@@ -1,22 +1,10 @@
-.label-dialog, .notice-inbox { display: grid; gap: 14px; }
-.label-dialog { padding: 16px 18px 21px; }
-.label-create, .label-row { display: flex; align-items: flex-end; gap: 10px; }
-.label-create label, .label-edit label { display: grid; flex: 1; gap: 6px; min-width: 0; font-size: .88rem; font-weight: 740; }
-.label-dialog input { width: 100%; min-height: 41px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--glass-strong); }
-.label-list, .notice-list { display: grid; gap: 7px; padding: 0; margin: 0; list-style: none; }
-.label-list li { display: grid; gap: 9px; min-width: 0; padding: 9px; border-radius: 12px; background: var(--tint); }
-.label-row { align-items: center; justify-content: space-between; flex-wrap: wrap; }
-.label-dialog .task-label, .task-labels button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; text-align: left; }
-.label-dialog .task-label { min-height: 30px; color: var(--jade-ink); background: var(--jade-wash); }
-.label-dialog .task-label svg { flex: none; }
-.label-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
-.label-actions .button { min-height: 34px; padding-inline: 9px; font-size: .81rem; }
-.label-edit { display: grid; gap: 8px; }
-.label-edit p { color: var(--ink-soft); font-size: .89rem; }
+.notice-inbox { display: grid; gap: 14px; }
+.notice-list { display: grid; gap: 7px; padding: 0; margin: 0; list-style: none; }
 .filter-bar .dropdown-value { max-width: 20ch; }
 
 .notification-button > span { position: absolute; top: -5px; right: -5px; display: grid; place-items: center; min-width: 18px; height: 18px; padding-inline: 4px; border-radius: 10px; color: var(--accent-ink); background: var(--accent); box-shadow: 0 0 0 2px var(--surface); font-size: .65rem; font-weight: 800; font-variant-numeric: tabular-nums; }
-.notice-inbox-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 9px; font-size: .88rem; font-weight: 750; }
+.notice-inbox-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 9px; font-size: .88rem; font-weight: 750; }
+.notice-inbox-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .notice-sound { min-height: 36px; padding-inline: 10px; }
 .notice-row { display: flex; align-items: center; gap: 9px; min-height: 67px; padding: 9px; border: 1px solid var(--line); border-radius: 13px; }
 .notice-row.unread { background: var(--jade-wash); }

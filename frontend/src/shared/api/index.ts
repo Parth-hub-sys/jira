@@ -1,2 +1,2 @@
-export { ApiError, authorizedRequest, onSessionEnd, restoreSession, signIn, signOut } from './client'
+export { ApiError, authorizedEventStream, authorizedRequest, onSessionEnd, restoreSession, signIn, signOut } from './client'
 export type { RequestOptions } from './client'

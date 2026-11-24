@@ -1,4 +1,4 @@
-# Fluztech workspace design
+# Fluxtech workspace design
 
 ## What works in the Rapport demo
 
@@ -73,7 +73,7 @@ For a narrow board, use a horizontal scrolling area with a visible lane count an
 
 | Screen | What to build |
 | --- | --- |
-| Sign in | A dedicated page with work email, password visibility, sign-in feedback, a sample board illustration, and a demo entry. The board opens after sign-in or demo entry. |
+| Sign in | A dedicated page with work email, password visibility, sign-in feedback, and a board illustration. The board opens after sign-in. |
 | Projects | Search visible projects by name or key on the page. Each card shows project name, key, description, and links to **Board** and **List**. Owners and organization admins see **New project**. |
 | Board and List | Share the project selector and task filters. Board lanes are Pending, In progress, and Done. List rows show key, title, status, priority, due date, and assignee. Keep filters in the URL so refresh and navigation preserve the view. |
 | Task detail | Route to the task UUID and display its key, title, description, assignee, due date, labels, comments, and activity. Open it as a right-side panel from the desktop board and as a full page on mobile. Return focus to the invoking card when the panel closes. |

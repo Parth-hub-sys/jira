@@ -4,6 +4,9 @@ export type Status = typeof statuses[number]
 export type Priority = typeof priorities[number]
 export type Role = 'owner' | 'admin' | 'member' | 'viewer'
 export type PendingTaskMove = { status: Status; previous: Status }
+export type WorkFilters = { query: string; priority: string; status: string; mine: boolean }
+
+export const emptyWorkFilters: WorkFilters = { query: '', priority: '', status: '', mine: false }
 
 export const statusNames: Record<Status, string> = {
   pending: 'Pending',
@@ -22,7 +25,6 @@ export interface Organization { id: string; name: string; slug: string; created_
 export interface Project {
   id: string
   name: string
-  key: string
   description: string | null
   organization_id: string
   created_by: string | null
@@ -30,7 +32,6 @@ export interface Project {
   updated_at: string
 }
 export interface Member { user_id: string; name: string; email: string; role: Role; joined_at: string }
-export interface Label { id: string; project_id: string; name: string }
 export interface Task {
   id: string
   project_id: string
@@ -41,7 +42,6 @@ export interface Task {
   status: Status
   priority: Priority
   assignee_id: string | null
-  label_ids: string[]
   due_at: string | null
   created_at: string
   updated_at: string
@@ -65,7 +65,6 @@ export interface Workspace {
   orgMembers: Member[]
   projectMembers: Member[]
   tasks: Task[]
-  labels: Label[]
 }
 
 export function matchesTask(task: Task, query: string) {

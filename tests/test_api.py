@@ -1,5 +1,7 @@
 import asyncio
 import os
+from contextlib import aclosing, suppress
+from time import time
 from uuid import uuid4
 
 import pytest
@@ -91,6 +93,45 @@ async def login(client, email):
 
 
 @pytest.mark.asyncio
+async def test_notification_stream_signals_only_the_recipient_after_commit(test_schema):
+    from app.services.notification_events import NotificationEvents, signal_notifications
+
+    events = NotificationEvents()
+    listener = asyncio.create_task(events.listen(test_schema))
+    try:
+        async with asyncio.timeout(5):
+            while not events.connected:
+                await asyncio.sleep(0.01)
+        recipient, other = uuid4(), uuid4()
+        sessions = async_sessionmaker(test_schema)
+        async with aclosing(events.stream(recipient, int(time()) + 60)) as target, aclosing(
+            events.stream(other, int(time()) + 60)
+        ) as unrelated, sessions() as db:
+            assert "event: ready" in await anext(target)
+            assert "event: ready" in await anext(unrelated)
+            delivery = asyncio.create_task(anext(target))
+            other_delivery = asyncio.create_task(anext(unrelated))
+            try:
+                await signal_notifications(db, [recipient])
+                assert not (await asyncio.wait([delivery, other_delivery], timeout=0.1))[0]
+                await db.rollback()
+                assert not (await asyncio.wait([delivery, other_delivery], timeout=0.1))[0]
+                await signal_notifications(db, [recipient])
+                await db.commit()
+                assert "event: changed" in await asyncio.wait_for(delivery, timeout=5)
+                assert not (await asyncio.wait([other_delivery], timeout=0.1))[0]
+            finally:
+                for pending in (delivery, other_delivery):
+                    pending.cancel()
+                    with suppress(asyncio.CancelledError):
+                        await pending
+    finally:
+        listener.cancel()
+        with suppress(asyncio.CancelledError):
+            await listener
+
+
+@pytest.mark.asyncio
 async def test_owner_creates_organization_and_adds_accounts(api):
     client, _, owner_id, _, outsider_id = api
     owner = (await login(client, "owner@example.com"))["access_token"]
@@ -147,9 +188,9 @@ async def test_project_workflow(api):
     await request(client, "DELETE", f"{org_path}/members/{owner_id}", 409, token=owner)
 
     projects = org_path + "/projects"
-    project = await request(client, "POST", projects, 201, token=owner, json={"name": "Engineering", "key": "eng"})
-    assert project["key"] == "ENG" and project["created_by"] == owner_id
-    await request(client, "POST", projects, 409, token=owner, json={"name": "Duplicate", "key": "ENG"})
+    project = await request(client, "POST", projects, 201, token=owner, json={"name": "Engineering"})
+    assert "key" not in project and project["created_by"] == owner_id
+    await request(client, "POST", projects, 422, token=owner, json={"name": "Legacy payload", "key": "ENG"})
     assert not await request(client, "GET", projects, 200, token=worker)
     project_path = f"projects/{project['id']}"
     await request(client, "GET", project_path, 404, token=worker)
@@ -165,12 +206,13 @@ async def test_project_workflow(api):
     await request(client, "POST", task_list, 422, token=owner, json=payload)
     await request(client, "PUT", project_member, 200, token=owner, json={"role": "member"})
     task = await request(client, "POST", task_list, 201, token=owner, json={"title": "Draft task"})
-    assert task["key"] == "ENG-1" and task["assignee_id"] is None
+    prefix = "P" + project["id"].replace("-", "")[:12].upper()
+    assert task["key"] == f"{prefix}-1" and task["assignee_id"] is None
     concurrent = await asyncio.gather(
         request(client, "POST", task_list, 201, token=owner, json={"title": "Second"}),
         request(client, "POST", task_list, 201, token=worker, json={"title": "Third"}),
     )
-    assert {row["key"] for row in concurrent} == {"ENG-2", "ENG-3"}
+    assert {row["key"] for row in concurrent} == {f"{prefix}-2", f"{prefix}-3"}
     task_path = f"tasks/{task['id']}"
     await request(client, "GET", task_path, 404, token=outsider)
     updated = await request(client, "PATCH", task_path, 200, token=owner, json=payload)
@@ -193,19 +235,11 @@ async def test_project_workflow(api):
     assert (await request(client, "GET", comments, 200, token=owner))[0]["body"] == "Reviewed"
     await request(client, "DELETE", comment_path, 204, token=owner)
 
-    labels = project_path + "/labels"
-    label = await request(client, "POST", labels, 201, token=owner, json={"name": "backend"})
-    await request(client, "POST", labels, 409, token=owner, json={"name": "backend"})
-    await request(client, "GET", labels, 200, token=worker)
-    label_path = f"{labels}/{label['id']}"
-    await request(client, "PATCH", label_path, 200, token=owner, json={"name": "api"})
-    await request(client, "PUT", task_path + "/labels", 422, token=worker, json={"label_ids": [str(uuid4())]})
-    await request(client, "PUT", task_path + "/labels", 200, token=worker, json={"label_ids": [label["id"]]})
-    assert (await request(client, "GET", task_path, 200, token=worker))["label_ids"] == [label["id"]]
-    await request(client, "DELETE", label_path, 204, token=owner)
-    assert not (await request(client, "GET", task_path, 200, token=worker))["label_ids"]
+    await request(client, "GET", project_path + "/labels", 404, token=worker)
+    await request(client, "PUT", task_path + "/labels", 404, token=worker, json={"label_ids": []})
+    assert "label_ids" not in await request(client, "GET", task_path, 200, token=worker)
     actions = [event["action"] for event in await request(client, "GET", task_path + "/activity", 200, token=worker)]
-    assert actions.count("task.transitioned") == 2 and "task.labels_updated" in actions
+    assert actions.count("task.transitioned") == 2
 
     notices = await request(client, "GET", "notifications", 200, token=worker, params={"unread": "true"})
     assert notices[0]["type"] == "task.assigned"
@@ -224,6 +258,18 @@ async def test_project_workflow(api):
     assert read["read_at"] is not None
     assert (await request(client, "PATCH", notice, 200, token=worker))["read_at"] == read["read_at"]
     assert not await request(client, "GET", "notifications", 200, token=worker, params={"unread": "true"})
+    for title in ("Bulk notice A", "Bulk notice B"):
+        await request(client, "POST", task_list, 201, token=owner, json={"title": title, "assignee_id": worker_id})
+    unread = await request(client, "GET", "notifications", 200, token=worker, params={"unread": "true"})
+    assert len(unread) == 2
+    bulk = await request(client, "PATCH", "notifications/read-all", 200, token=worker, json={"operation_id": str(uuid4())})
+    assert bulk["updated_count"] == 2
+    assert set(bulk["notification_ids"]) == {item["id"] for item in unread}
+    assert not await request(client, "GET", "notifications", 200, token=worker, params={"unread": "true"})
+    assert (await request(client, "PATCH", "notifications/read-all", 200, token=worker))["updated_count"] == 0
+    history = await request(client, "GET", "notifications", 200, token=worker)
+    assert {item["read_at"] for item in history if item["id"] in bulk["notification_ids"]} == {bulk["read_at"]}
+    assert await request(client, "GET", "notifications", 200, token=owner, params={"unread": "true"}) == comment_notices
     await request(client, "DELETE", project_member, 204, token=owner)
     assert (await request(client, "GET", task_path, 200, token=owner))["assignee_id"] is None
     await request(client, "PUT", project_member, 200, token=owner, json={"role": "member"})

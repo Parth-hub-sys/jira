@@ -5,7 +5,7 @@ from fastapi import APIRouter, Query
 from sqlalchemy import or_, select
 
 from app.api.dependencies import CurrentUser, Database, Page
-from app.models import Label, Task, TaskLabel, activity_log
+from app.models import Task, activity_log
 from app.schemas.tasks import ActivityRead, Priority, TaskCreate, TaskRead, TaskStatus, TaskUpdate, Transition
 from app.services import tasks
 from app.services.access import project_access, task_access
@@ -23,7 +23,6 @@ async def list_tasks(
     status: TaskStatus | None = None,
     assignee_id: UUID | None = None,
     priority: Priority | None = None,
-    label_id: UUID | None = None,
     q: Annotated[str | None, Query(min_length=1, max_length=100)] = None,
 ) -> list[TaskRead]:
     access = await project_access(db, project_id, user.id)
@@ -34,16 +33,10 @@ async def list_tasks(
         query = query.where(Task.assignee_id == assignee_id)
     if priority is not None:
         query = query.where(Task.priority == priority)
-    if label_id is not None:
-        query = (
-            query.join(TaskLabel, TaskLabel.task_id == Task.id)
-            .join(Label, Label.id == TaskLabel.label_id)
-            .where(Label.id == label_id, Label.project_id == project_id)
-        )
     if q is not None:
         query = query.where(or_(Task.title.icontains(q, autoescape=True), Task.description.icontains(q, autoescape=True)))
     entries = (await db.scalars(page.apply(query.order_by(Task.number.desc())))).all()
-    return await tasks.task_responses(db, entries, access.project)
+    return [TaskRead.from_task(task, access.project.key) for task in entries]
 
 
 @router.post("/projects/{project_id}/tasks", status_code=201)
@@ -55,7 +48,7 @@ async def create_task(project_id: UUID, payload: TaskCreate, user: CurrentUser, 
 @router.get("/tasks/{task_id}")
 async def get_task(task_id: UUID, user: CurrentUser, db: Database) -> TaskRead:
     task, access = await task_access(db, task_id, user.id)
-    return await tasks.task_response(db, task, access.project)
+    return TaskRead.from_task(task, access.project.key)
 
 
 @router.patch("/tasks/{task_id}")

@@ -1,11 +1,10 @@
 import type { Notice } from '../model'
 import { request } from '../api'
-import type { Mode } from '../api'
 
 export const notificationPageSize = 25
 
-export function fetchNotifications(mode: Mode, offset = 0, unread = false) {
-  return request<Notice[]>(mode, `/notifications?limit=${notificationPageSize + 1}&offset=${offset}&unread=${unread}`)
+export function fetchNotifications(offset = 0, unread = false) {
+  return request<Notice[]>(`/notifications?limit=${notificationPageSize + 1}&offset=${offset}&unread=${unread}`)
 }
 
 export function newestFirst(a: Notice, b: Notice) {
@@ -23,3 +22,5 @@ export function noticeTask(item: Notice) {
 }
 
 export type NotificationAlert = { item: Notice; count: number }
+
+export type BulkReadResult = { notification_ids: string[]; updated_count: number; read_at: string }

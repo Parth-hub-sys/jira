@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Dialog, Dropdown, FormError } from '../../../shared/ui'
 import { messageOf } from '../../../shared/lib/text'
-import type { Mode } from '../api'
 import type { Member, Role, Workspace } from '../model'
 
 export type MemberDialog = { kind: 'organization' | 'project'; member?: Member }
@@ -10,8 +9,8 @@ export type OrganizationMemberInput = { email: string; role: Exclude<Role, 'view
 )
 const minimumPasswordLength = 8
 
-export function MemberForm({ selection, workspace, mode, onSave, onAdd, onRemove, onClose }: {
-  selection: MemberDialog; workspace: Workspace; mode: Mode
+export function MemberForm({ selection, workspace, onSave, onAdd, onRemove, onClose }: {
+  selection: MemberDialog; workspace: Workspace
   onSave(id: string, role: Role): Promise<void>; onRemove(id: string): Promise<void>; onClose(): void
   onAdd(values: OrganizationMemberInput): Promise<void>
 }) {
@@ -22,8 +21,8 @@ export function MemberForm({ selection, workspace, mode, onSave, onAdd, onRemove
   const [account, setAccount] = useState('')
   const [accountMode, setAccountMode] = useState<OrganizationMemberInput['mode']>('create')
   const [role, setRole] = useState<Role>(member?.role ?? 'member')
-  const needsAccountChoice = !member && (kind === 'project' || mode === 'demo')
-  const provisionAccount = !member && !needsAccountChoice
+  const needsAccountChoice = !member && kind === 'project'
+  const provisionAccount = !member && kind === 'organization'
   const isOwner = workspace.orgMembers.find(item => item.user_id === workspace.user.id)?.role === 'owner'
   const roles: Role[] = kind === 'project' ? ['member', 'viewer', 'admin'] : isOwner ? ['member', 'admin', 'owner'] : ['member', 'admin']
   const selectedRole = roles.includes(role) ? role : roles[0]
@@ -32,9 +31,12 @@ export function MemberForm({ selection, workspace, mode, onSave, onAdd, onRemove
     setError('')
     try { await action() } catch (failure) { setError(messageOf(failure)) } finally { setBusy(false) }
   }
-  const choices = kind === 'project' ? workspace.orgMembers.filter(item => !workspace.projectMembers.some(projectMember => projectMember.user_id === item.user_id)) : []
-  const available = kind === 'project' ? choices : workspace.orgMembers
-  return <Dialog title={member ? 'Manage member' : 'Add member'} onClose={onClose}>
+  const available = needsAccountChoice
+    ? workspace.orgMembers.filter(item => !workspace.projectMembers.some(projectMember => projectMember.user_id === item.user_id))
+    : []
+  const scopeName = kind === 'project' ? workspace.project?.name : workspace.organization?.name
+  const title = member ? 'Manage member' : kind === 'project' ? 'Add project member' : 'Add member'
+  return <Dialog title={title} onClose={onClose}>
     <form className="form" onSubmit={event => {
       event.preventDefault()
       if (busy) return
@@ -57,15 +59,21 @@ export function MemberForm({ selection, workspace, mode, onSave, onAdd, onRemove
       if (!userId) { setError('Choose a member.'); return }
       void setMember(() => onSave(userId, selectedRole))
     }}>
-      {member ? <p><strong>{member.name}</strong><br /><span className="muted">{member.email}</span></p> : needsAccountChoice
+      <p className="member-form-scope">{kind === 'project' ? 'Project' : 'Organization'} <span aria-hidden="true">·</span> <strong>{scopeName}</strong></p>
+      {member ? <p><strong>{member.name}</strong><br /><span className="muted">{member.email}</span></p> : needsAccountChoice && !available.length
+        ? <p className="muted">Everyone in this organization is already on the project. Add new people under Organization members first.</p> : needsAccountChoice
         ? <div className="form-field"><span>Member</span><Dropdown label="Member" value={account} placeholder="Choose a member" disabled={busy}
           options={available.map(item => ({ value: item.user_id, label: item.name }))} onChange={setAccount} firstFocus /></div>
         : <>
-          <div className="segmented" aria-label="Account type">
-            <button type="button" aria-pressed={accountMode === 'create'} disabled={busy}
-              onClick={() => { setAccountMode('create'); setError('') }}>Create new account</button>
-            <button type="button" aria-pressed={accountMode === 'existing'} disabled={busy}
-              onClick={() => { setAccountMode('existing'); setError('') }}>Add existing account</button>
+          <div className="member-account-options" role="group" aria-label="Account type">
+            <button type="button" aria-label="Create new account" aria-pressed={accountMode === 'create'} disabled={busy}
+              onClick={() => { setAccountMode('create'); setError('') }}>
+              <strong>Create new account</strong><span>Set up a Fluxtech login</span>
+            </button>
+            <button type="button" aria-label="Add existing account" aria-pressed={accountMode === 'existing'} disabled={busy}
+              onClick={() => { setAccountMode('existing'); setError('') }}>
+              <strong>Add existing account</strong><span>Use an existing Fluxtech login</span>
+            </button>
           </div>
           <label key="email">Email address<input name="email" type="email" autoComplete="off" required maxLength={255} data-first-focus /></label>
           {accountMode === 'create' ? <>

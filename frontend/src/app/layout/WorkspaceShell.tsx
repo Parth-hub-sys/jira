@@ -1,7 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Bell, ChevronDown, Folder, Kanban, LayoutDashboard, ListTodo, LogIn, LogOut, Plus, Search, UserRound, Users } from 'lucide-react'
-import type { Mode } from '../../features/workspace/api'
+import { Bell, ChevronDown, Folder, Kanban, LayoutDashboard, ListTodo, LogOut, Plus, Search, UserRound, Users } from 'lucide-react'
 import type { Workspace } from '../../features/workspace/model'
 import { notificationPageSize } from '../../features/workspace/notifications/model'
 import { Avatar, Dropdown } from '../../shared/ui'
@@ -18,7 +17,6 @@ const navigation = [
 
 type Props = {
   workspace: Workspace | null
-  mode: Mode
   view: WorkspaceView
   appearance: ReactNode
   loading: boolean
@@ -33,12 +31,12 @@ type Props = {
   openNotifications(): void
   createTask(): void
   openProfile(): void
-  onAccountAction(): void
+  onSignOut(): void
 }
 
 export function WorkspaceShell({
-  workspace, mode, view, appearance, loading, canWrite, organizationPickerId, unread, children, go, selectOrganization,
-  selectProject, openSearch, openNotifications, createTask, openProfile, onAccountAction,
+  workspace, view, appearance, loading, canWrite, organizationPickerId, unread, children, go, selectOrganization,
+  selectProject, openSearch, openNotifications, createTask, openProfile, onSignOut,
 }: Props) {
   const [profileOpen, setProfileOpen] = useState(false)
   const profile = useRef<HTMLDivElement>(null)
@@ -84,10 +82,11 @@ export function WorkspaceShell({
         <button ref={profileTrigger} type="button" className="profile-trigger" aria-label="Account menu" aria-expanded={profileOpen}
           aria-controls={profileMenuId} onClick={() => setProfileOpen(value => !value)}><Avatar name={workspace.user.name} id={workspace.user.id} /><ChevronDown size={13} /></button>
         <div id={profileMenuId} className="profile-menu" data-open={profileOpen} inert={!profileOpen}>
-          <strong>{workspace.user.name}</strong><span className="muted">{workspace.user.email}</span>
-          {mode === 'live' && <button onClick={() => { setProfileOpen(false); openProfile() }}><UserRound size={17} />Edit profile</button>}
-          <button onClick={() => { setProfileOpen(false); onAccountAction() }}>
-            {mode === 'demo' ? <LogIn size={17} /> : <LogOut size={17} />}{mode === 'demo' ? 'Sign in' : 'Sign out'}
+          <strong>{workspace.user.name}</strong>
+          <span className="profile-email muted" title={workspace.user.email}>{workspace.user.email}</span>
+          <button onClick={() => { setProfileOpen(false); openProfile() }}><UserRound size={17} />Edit profile</button>
+          <button onClick={() => { setProfileOpen(false); onSignOut() }}>
+            <LogOut size={17} />Sign out
           </button>
         </div>
       </div>}
@@ -99,13 +98,12 @@ export function WorkspaceShell({
         </nav>
       </aside>
       <main id="workspace-main" className="main" tabIndex={-1} aria-busy={loading}>
-        {workspace?.organization && <div className="project-toolbar">
+        {workspace?.organization && view !== 'members' && <div className="project-toolbar">
           {workspace.projects.length > 0 ? <Dropdown className="project-picker" label="Project" value={workspace.project?.id ?? ''} disabled={loading}
             leading={<span className="project-symbol"><Folder size={16} /></span>}
             options={workspace.projects.map(item => ({ value: item.id, label: item.name }))}
             onChange={id => { if (id !== workspace.project?.id) selectProject(id) }} /> : <span className="muted">Workspace projects</span>}
           <div className="workspace-primary">
-            {mode === 'demo' && <button className="demo-tag" onClick={onAccountAction}>Demo <span>· Sign in</span></button>}
             {canWrite && <button className="button primary new-task" onClick={createTask} disabled={loading}><Plus size={19} strokeWidth={2.3} />New task</button>}
           </div>
         </div>}

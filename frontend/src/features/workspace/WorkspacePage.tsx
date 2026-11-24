@@ -2,17 +2,16 @@ import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { CircleAlert, X } from 'lucide-react'
 import { WorkspaceShell } from '../../app/layout/WorkspaceShell'
-import { blankFilters, viewRoute } from '../../app/routing'
+import { viewRoute } from '../../app/routing'
 import type { Route, WorkspaceView } from '../../app/routing'
 import { Empty } from '../../shared/ui'
 import { ProfileDialog } from '../auth/ProfileDialog'
 import { Members, Overview, Projects, WorkView } from './index'
-import type { MemberDialog, WorkFilters } from './index'
+import type { MemberDialog } from './index'
+import type { MembersSection } from './members/Members'
 import { getProject } from './api'
-import type { Mode } from './api'
-import { messageOf, statusNames } from './model'
-import type { Notice, Status, Task } from './model'
-import { LabelDialog } from './labels/LabelDialog'
+import { emptyWorkFilters, messageOf, statusNames } from './model'
+import type { Notice, Status, Task, WorkFilters } from './model'
 import { NotificationInbox } from './notifications/NotificationInbox'
 import { NotificationPopup } from './notifications/NotificationPopup'
 import { noticeTask } from './notifications/model'
@@ -25,39 +24,38 @@ import type { WorkspaceDialog } from './WorkspaceDialogs'
 import { useWorkspace } from './useWorkspace'
 
 type Props = {
-  mode: Mode; route: Route; appearance: ReactNode
+  route: Route; appearance: ReactNode
   navigate(route: Route, replace?: boolean): void
   onSignIn(): void
   onSignOut(): Promise<void>
 }
 
-export function WorkspacePage({ mode, route, appearance, navigate, onSignIn, onSignOut }: Props) {
-  const data = useWorkspace(mode, onSignIn)
+export function WorkspacePage({ route, appearance, navigate, onSignIn, onSignOut }: Props) {
+  const data = useWorkspace(onSignIn)
   const { workspace, loading, canWrite, pendingMoves } = data
-  const notifications = useNotifications(mode, workspace?.user.id)
+  const notifications = useNotifications(workspace?.user.id)
   const [dialog, setDialog] = useState<WorkspaceDialog | null>(null)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
-  const [labelDialog, setLabelDialog] = useState<{ projectId: string; canManage: boolean }>()
   const [profileOpen, setProfileOpen] = useState(false)
   const [organizationOpen, setOrganizationOpen] = useState(false)
   const [createOrganizationOpen, setCreateOrganizationOpen] = useState(false)
   const [detailsProjectId, setDetailsProjectId] = useState('')
   const [memberDialog, setMemberDialog] = useState<MemberDialog | null>(null)
-  const [memberScope, setMemberScope] = useState<'organization' | 'project'>('organization')
+  const [memberSection, setMemberSection] = useState<MembersSection>('organization')
   const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null)
   const view = route.view === 'sign-in' ? 'board' : route.view
 
   useEffect(() => {
     const keyboard = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k' && workspace?.project && !loading &&
-          !route.task && !memberDialog && !profileOpen && !organizationOpen && !createOrganizationOpen && !detailsProjectId && !notificationsOpen && !labelDialog) {
+          !route.task && !memberDialog && !profileOpen && !organizationOpen && !createOrganizationOpen && !detailsProjectId && !notificationsOpen) {
         event.preventDefault()
         setDialog(current => current === 'search' ? null : current ?? 'search')
       }
     }
     window.addEventListener('keydown', keyboard)
     return () => window.removeEventListener('keydown', keyboard)
-  }, [workspace, loading, route.task, memberDialog, profileOpen, organizationOpen, createOrganizationOpen, detailsProjectId, notificationsOpen, labelDialog])
+  }, [workspace, loading, route.task, memberDialog, profileOpen, organizationOpen, createOrganizationOpen, detailsProjectId, notificationsOpen])
 
   useEffect(() => {
     if (!notice) return
@@ -81,7 +79,7 @@ export function WorkspacePage({ mode, route, appearance, navigate, onSignIn, onS
     const switchingProject = projectId && workspace.project?.id !== projectId
     const organizationId = switchingProject ? link.organization_id
       ?? workspace.projects.find(project => project.id === projectId)?.organization_id
-      ?? (await getProject(mode, projectId)).organization_id : undefined
+      ?? (await getProject(projectId)).organization_id : undefined
     await notifications.markRead(item)
     setDialog(null)
     setMemberDialog(null)
@@ -89,7 +87,6 @@ export function WorkspacePage({ mode, route, appearance, navigate, onSignIn, onS
     setCreateOrganizationOpen(false)
     setProfileOpen(false)
     setDetailsProjectId('')
-    setLabelDialog(undefined)
     setNotificationsOpen(false)
     if (switchingProject) {
       data.chooseProject(projectId, organizationId)
@@ -111,28 +108,28 @@ export function WorkspacePage({ mode, route, appearance, navigate, onSignIn, onS
   else if (workspace && view === 'projects') content = <Projects workspace={workspace} canManage={data.manageOrg}
     onCreate={() => setDialog('create-project')} selectProject={id => { data.chooseProject(id); go('board') }} onDetails={setDetailsProjectId} />
   else if (workspace && view === 'members') content = <Members workspace={workspace} manageOrg={data.manageOrg} manageProject={data.manageProject}
-    selectedScope={memberScope} onScopeChange={setMemberScope}
-    onCreateOrganization={mode === 'live' ? () => setCreateOrganizationOpen(true) : undefined}
+    section={memberSection} onSectionChange={setMemberSection}
+    onSelectProject={data.chooseProject} onViewProjects={() => go('projects')}
+    onCreateOrganization={() => setCreateOrganizationOpen(true)}
     onMember={(kind, member) => setMemberDialog({ kind, member })} onOrganization={() => setOrganizationOpen(true)} />
   else if (workspace && !workspace.project) content = <section className="panel"><Empty title="No projects available" body="Choose a project to see its work." action={<button className="button primary" onClick={() => go('projects')}>Open Projects</button>} /></section>
-  else if (workspace && view === 'overview') content = <Overview key={workspace.project?.id} workspace={workspace} openTask={openTask} viewWork={(status, mine) => go('list', { ...blankFilters, status: status ?? '', mine: Boolean(mine) })} />
+  else if (workspace && view === 'overview') content = <Overview key={workspace.project?.id} workspace={workspace} openTask={openTask} viewWork={(status, mine) => go('list', { ...emptyWorkFilters, status: status ?? '', mine: Boolean(mine) })} />
   else if (workspace) content = <WorkView key={workspace.project?.id} workspace={workspace} board={view === 'board'}
     filters={route.filters} setFilters={filters => navigate({ ...route, filters }, true)}
     openTask={openTask} moveTask={moveTask} pendingMoves={pendingMoves} onCreate={() => setDialog('create-task')}
-    openLabels={() => { if (workspace.project) setLabelDialog({ projectId: workspace.project.id, canManage: data.manageProject }) }}
     canWrite={canWrite && !loading} onViewChange={board => go(board ? 'board' : 'list', route.filters)} />
 
   return <>
-    <WorkspaceShell workspace={workspace} mode={mode} view={view} appearance={appearance} loading={loading} canWrite={canWrite} go={go}
+    <WorkspaceShell workspace={workspace} view={view} appearance={appearance} loading={loading} canWrite={canWrite} go={go}
       organizationPickerId={data.organizationPickerId} unread={notifications.unread.length}
-      selectOrganization={id => { data.chooseOrganization(id); setMemberScope('organization'); go(view) }}
-      selectProject={id => { data.chooseProject(id); navigate({ ...route, filters: blankFilters, task: '' }, true) }}
+      selectOrganization={id => { data.chooseOrganization(id); setMemberSection('organization'); go(view) }}
+      selectProject={id => { data.chooseProject(id); navigate({ ...route, filters: emptyWorkFilters, task: '' }, true) }}
       openSearch={() => setDialog('search')} openNotifications={openNotifications}
       createTask={() => setDialog('create-task')} openProfile={() => setProfileOpen(true)}
-      onAccountAction={() => mode === 'demo' ? onSignIn() : void onSignOut().catch(errorNotice)}>
+      onSignOut={() => void onSignOut().catch(errorNotice)}>
       {content}
     </WorkspaceShell>
-    {workspace && <WorkspaceDialogs mode={mode} workspace={workspace} dialog={dialog} memberDialog={memberDialog}
+    {workspace && <WorkspaceDialogs workspace={workspace} dialog={dialog} memberDialog={memberDialog}
       taskId={route.task} canWrite={canWrite} canModerate={data.manageProject} pendingMove={pendingMoves.get(route.task)} moveTask={data.moveTask} closeDialog={() => setDialog(null)}
       closeTask={() => navigate({ ...route, task: '' }, true)} closeMember={() => setMemberDialog(null)} openTask={openTask}
       createTask={async values => {
@@ -158,9 +155,8 @@ export function WorkspacePage({ mode, route, appearance, navigate, onSignIn, onS
         setNotice({ text: values.mode === 'existing' ? 'Member added.' : 'Account created and member added.' })
       }}
       updateTask={data.updateTask}
-      updateTaskLabels={data.updateTaskLabels}
     />}
-    {organizationOpen && workspace?.organization && <OrganizationDialog key={workspace.organization.id} mode={mode}
+    {organizationOpen && workspace?.organization && <OrganizationDialog key={workspace.organization.id}
       organizationId={workspace.organization.id} canManage={data.manageOrg} onClose={() => setOrganizationOpen(false)}
       onSaved={organization => {
         data.updateOrganization(organization)
@@ -169,35 +165,28 @@ export function WorkspacePage({ mode, route, appearance, navigate, onSignIn, onS
     {createOrganizationOpen && <CreateOrganizationDialog onClose={() => setCreateOrganizationOpen(false)} onSave={async (name, slug) => {
       const created = await data.createOrganization(name, slug)
       setCreateOrganizationOpen(false)
-      setMemberScope('organization')
+      setMemberSection('organization')
       go('members')
       setNotice({ text: `${created.name} created.` })
     }} />}
     {detailsProjectId && workspace && <ProjectDetailsDialog key={detailsProjectId} projectId={detailsProjectId}
-      mode={mode} workspace={workspace} manageOrg={data.manageOrg} onClose={() => setDetailsProjectId('')}
+      workspace={workspace} manageOrg={data.manageOrg} onClose={() => setDetailsProjectId('')}
       onSaved={project => {
         data.updateProject(project)
         setNotice({ text: 'Project updated.' })
       }}
       onBoard={() => { data.chooseProject(detailsProjectId); setDetailsProjectId(''); go('board') }}
-      onMembers={() => { data.chooseProject(detailsProjectId); setMemberScope('project'); setDetailsProjectId(''); go('members') }}
-      onLabels={canManage => { setLabelDialog({ projectId: detailsProjectId, canManage }); setDetailsProjectId('') }}
+      onMembers={() => { data.chooseProject(detailsProjectId); setMemberSection('project'); setDetailsProjectId(''); go('members') }}
     />}
-    {labelDialog && workspace && <LabelDialog key={labelDialog.projectId} mode={mode} projectId={labelDialog.projectId}
-      labels={workspace.project?.id === labelDialog.projectId ? workspace.labels : undefined} canManage={labelDialog.canManage}
-      onUpsert={data.upsertLabel} onRemove={(projectId, id) => {
-        data.removeLabel(projectId, id)
-        if (workspace.project?.id === projectId && route.filters.label === id) navigate({ ...route, filters: { ...route.filters, label: '' } }, true)
-      }} onClose={() => setLabelDialog(undefined)} />}
     {profileOpen && workspace && <ProfileDialog name={workspace.user.name} email={workspace.user.email} accountId={workspace.user.id}
       onClose={() => setProfileOpen(false)} onSave={async name => {
         await data.updateProfile(name)
         setProfileOpen(false)
         setNotice({ text: 'Profile updated.' })
       }} />}
-    {notificationsOpen && workspace && <NotificationInbox mode={mode} unread={notifications.unread} readUpdates={notifications.readUpdates}
+    {notificationsOpen && workspace && <NotificationInbox unread={notifications.unread} readUpdates={notifications.readUpdates}
       sound={notifications.sound.enabled} onToggleSound={notifications.sound.toggle} onOpen={openNotificationTask}
-      onRead={notifications.markRead} onClose={() => setNotificationsOpen(false)} />}
+      onRead={notifications.markRead} onReadAll={notifications.markAllRead} onClose={() => setNotificationsOpen(false)} />}
     {notifications.alert && <NotificationPopup key={notifications.alert.item.id} alert={notifications.alert}
       onOpen={openNotifications} onDismiss={notifications.dismiss} />}
     {notice && <div className={`toast ${notice.error ? 'error' : ''}`} role={notice.error ? 'alert' : 'status'}>

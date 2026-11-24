@@ -5,9 +5,9 @@ import './sign-in.css'
 
 type SignInPageProps = {
   onSignIn(email: string, password: string): Promise<void>
-  onDemo(): void
   themeControl: ReactNode
   brand: ReactNode
+  restoreError: string
 }
 
 const previewCards = [
@@ -43,7 +43,7 @@ function WorkspaceIllustration() {
   )
 }
 
-export function SignInPage({ onSignIn, onDemo, themeControl, brand }: SignInPageProps) {
+export function SignInPage({ onSignIn, themeControl, brand, restoreError }: SignInPageProps) {
   const emailId = useId()
   const passwordId = useId()
   const [showPassword, setShowPassword] = useState(false)
@@ -76,7 +76,7 @@ export function SignInPage({ onSignIn, onDemo, themeControl, brand }: SignInPage
         <section className="sign-in-panel" aria-labelledby="sign-in-title">
           <div className="sign-in-panel-inner">
             <h1 id="sign-in-title">Sign in</h1>
-            <p className="sign-in-intro">Use your work account to open your Fluztech workspace.</p>
+            <p className="sign-in-intro">Use your work account to open your Fluxtech workspace.</p>
 
             <form className="sign-in-form" onSubmit={submit} aria-busy={pending}>
               <div className="sign-in-field">
@@ -119,18 +119,11 @@ export function SignInPage({ onSignIn, onDemo, themeControl, brand }: SignInPage
                 </div>
               </div>
 
-              {error && <p className="sign-in-error" role="alert">{error}</p>}
+              {(error || restoreError) && <p className="sign-in-error" role="alert">{error || restoreError}</p>}
               <button className="sign-in-submit" disabled={pending}>
                 {pending ? 'Signing in…' : 'Sign in'}
               </button>
             </form>
-
-            <div className="sign-in-demo">
-              <span>Want a look around?</span>
-              <button type="button" onClick={onDemo} disabled={pending}>
-                Explore the demo
-              </button>
-            </div>
           </div>
         </section>
         <WorkspaceIllustration />

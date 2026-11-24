@@ -13,8 +13,6 @@
 .top-spacer { flex: 1; }
 .search-trigger { min-width: 231px; height: 43px; display: flex; align-items: center; gap: 10px; color: var(--ink-soft); padding: 0 9px 0 13px; background: var(--glass); border: 1px solid var(--edge); border-radius: 13px; text-align: left; }
 .search-trigger kbd { margin-left: auto; font: 660 .72rem 'DM Sans Variable', sans-serif; color: var(--muted); background: var(--tint); padding: 4px 5px; border: 1px solid var(--line); border-radius: 5px; white-space: nowrap; }
-.demo-tag { min-height: 42px; white-space: nowrap; padding: 0 6px; color: var(--ink-soft); font-size: .83rem; font-weight: 790; }
-.demo-tag span { font-weight: 610; }
 .icon-button { position: relative; display: inline-grid; place-items: center; width: 43px; height: 43px; padding: 0; border-radius: 12px; color: var(--ink-soft); background: var(--glass); border: 1px solid var(--edge); flex: none; }
 .icon-button:hover, .search-trigger:hover { background: var(--glass-strong); }
 .theme-toggle { border-radius: 50%; }
@@ -29,7 +27,7 @@
 .profile-trigger[aria-expanded=true] > svg { transform: rotate(180deg); }
 .profile-menu { position: absolute; z-index: 5; top: calc(100% + 12px); right: 0; display: grid; gap: 3px; width: min(232px,calc(100vw - 26px)); border: 1px solid var(--line); border-radius: 16px; padding: 15px; background: var(--glass-strong); box-shadow: var(--shadow); transform-origin: top right; opacity: 0; transform: translateY(-6px) scale(.98); visibility: hidden; pointer-events: none; transition: opacity 170ms var(--ease), transform 170ms var(--ease), visibility 170ms; }
 .profile-menu[data-open=true] { opacity: 1; transform: none; visibility: visible; pointer-events: auto; transition: opacity 170ms var(--ease), transform 170ms var(--ease); }
-.profile-menu > span { overflow-wrap: anywhere; }
+.profile-email { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .85rem; line-height: 1.35; }
 .profile-menu button { display: flex; align-items: center; gap: 9px; margin-top: 8px; padding: 10px; border-radius: 9px; background: var(--tint); text-align: left; font-weight: 700; }
 
 .layout { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 24px; align-items: start; padding: 10px 0 38px; }

@@ -38,9 +38,6 @@
 .drawer-status { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
 .drawer-task-actions + .form-error { margin-bottom: 10px; }
 .task-description { margin-bottom: 14px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.55; }
-.task-labels { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
-.task-labels button { min-height: 31px; }
-.task-labels .selected-label { background: var(--jade-wash); color: var(--jade-ink); }
 .drawer-body .form { padding-inline: 0; }
 .drawer-tabs { margin-top: 15px; }
 .drawer-body .form-error { margin-top: 8px; }

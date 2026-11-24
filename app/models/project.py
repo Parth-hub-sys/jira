@@ -54,6 +54,7 @@ class Project(Base):
         String(255),
         nullable = False
     )
+    # Internal prefix for task references, including references already issued.
     key : Mapped[str] = mapped_column(
         String(50),
         nullable = False,

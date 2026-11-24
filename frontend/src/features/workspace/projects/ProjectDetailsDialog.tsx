@@ -1,22 +1,20 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Kanban, Tags, Users } from 'lucide-react'
+import { Kanban, Users } from 'lucide-react'
 import { Dialog } from '../../../shared/ui'
 import { getProject, listProjectMembers, patchProject } from '../api'
-import type { Mode, ProjectChanges } from '../api'
+import type { ProjectChanges } from '../api'
 import { longDate, messageOf } from '../model'
 import type { Project, Workspace } from '../model'
 import { ProjectFields } from './ProjectForm'
 
 type Props = {
-  mode: Mode
   projectId: string
   workspace: Workspace
   manageOrg: boolean
   onSaved(project: Project): void
   onBoard(): void
   onMembers(): void
-  onLabels(canManage: boolean): void
   onClose(): void
 }
 
@@ -30,7 +28,7 @@ function changedFields(form: HTMLFormElement, project: Project): ProjectChanges 
   return changes
 }
 
-export function ProjectDetailsDialog({ mode, projectId, workspace, manageOrg, onSaved, onBoard, onMembers, onLabels, onClose }: Props) {
+export function ProjectDetailsDialog({ projectId, workspace, manageOrg, onSaved, onBoard, onMembers, onClose }: Props) {
   const [project, setProject] = useState<Project | null>(null)
   const [projectAdmin, setProjectAdmin] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -42,14 +40,14 @@ export function ProjectDetailsDialog({ mode, projectId, workspace, manageOrg, on
 
   useEffect(() => {
     let active = true
-    Promise.all([getProject(mode, projectId), manageOrg ? [] : listProjectMembers(mode, projectId)])
+    Promise.all([getProject(projectId), manageOrg ? [] : listProjectMembers(projectId)])
       .then(([record, members]) => {
         if (!active) return
         setProject(record)
         setProjectAdmin(members.some(member => member.user_id === workspace.user.id && member.role === 'admin'))
       }).catch(failure => { if (active) setError(messageOf(failure)) })
     return () => { active = false }
-  }, [mode, projectId, manageOrg, workspace.user.id, attempt])
+  }, [projectId, manageOrg, workspace.user.id, attempt])
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -61,7 +59,7 @@ export function ProjectDetailsDialog({ mode, projectId, workspace, manageOrg, on
     setError('')
     setSaving(true)
     try {
-      const updated = await patchProject(mode, project.id, changes)
+      const updated = await patchProject(project.id, changes)
       onSaved(updated)
       onClose()
     } catch (failure) { setError(messageOf(failure)) }
@@ -82,7 +80,6 @@ export function ProjectDetailsDialog({ mode, projectId, workspace, manageOrg, on
       <div className="form-actions">
         <button className="button secondary" type="button" disabled={saving} onClick={onBoard}><Kanban size={16} />Open board</button>
         <button className="button secondary" type="button" disabled={saving} onClick={onMembers}><Users size={16} />{canManage ? 'Manage members' : 'View members'}</button>
-        <button className="button secondary" type="button" disabled={saving} onClick={() => onLabels(canManage)}><Tags size={16} />Labels</button>
         {canManage && <button className="button primary" disabled={saving || !dirty}>{saving ? 'Saving…' : 'Save changes'}</button>}
       </div>
     </form> : <div className="form">{error ? <>

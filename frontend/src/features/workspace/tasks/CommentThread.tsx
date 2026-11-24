@@ -5,12 +5,10 @@ import { Avatar, FormError } from '../../../shared/ui'
 import { longDate } from '../../../shared/lib/date'
 import { messageOf } from '../../../shared/lib/text'
 import { request } from '../api'
-import type { Mode } from '../api'
 import type { Comment } from '../model'
 import { useTaskFeed } from './useTaskFeed'
 
-export function CommentThread({ mode, taskPath, userId, writable, canModerate, name }: {
-  mode: Mode
+export function CommentThread({ taskPath, userId, writable, canModerate, name }: {
   taskPath: string
   userId: string
   writable: boolean
@@ -18,7 +16,7 @@ export function CommentThread({ mode, taskPath, userId, writable, canModerate, n
   name(userId: string): string | undefined
 }) {
   const path = taskPath + '/comments'
-  const { page, setPage, loading, error: loadError, loadMore, retry } = useTaskFeed<Comment>(mode, path)
+  const { page, setPage, loading, error: loadError, loadMore, retry } = useTaskFeed<Comment>(path)
   const [recent, setRecent] = useState<Comment[]>([])
   const [action, setAction] = useState<{ id: string; kind: 'edit' | 'delete' }>()
   const [saving, setSaving] = useState(false)
@@ -46,7 +44,7 @@ export function CommentThread({ mode, taskPath, userId, writable, canModerate, n
     if (comment?.body === body) { setAction(undefined); setError(''); return }
 
     void mutate(async () => {
-      const saved = await request<Comment>(mode, comment ? `${path}/${comment.id}` : path, {
+      const saved = await request<Comment>(comment ? `${path}/${comment.id}` : path, {
         method: comment ? 'PATCH' : 'POST', data: { body },
       })
       if (comment) {
@@ -63,7 +61,7 @@ export function CommentThread({ mode, taskPath, userId, writable, canModerate, n
 
   function remove(id: string) {
     void mutate(async () => {
-      await request<void>(mode, `${path}/${id}`, { method: 'DELETE' })
+      await request<void>(`${path}/${id}`, { method: 'DELETE' })
       setPage(current => current && {
         items: current.items.filter(item => item.id !== id),
         // The deleted row no longer occupies a position before the next server page.

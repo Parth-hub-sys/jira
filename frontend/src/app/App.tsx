@@ -1,30 +1,23 @@
 import { useCallback, useEffect, useState } from 'react'
 import { SignInPage } from '../features/auth/SignInPage'
 import { WorkspacePage } from '../features/workspace/WorkspacePage'
-import type { Mode } from '../features/workspace/api'
-import { onSessionEnd, restoreSession, signIn, signOut } from '../shared/api'
+import { ApiError, onSessionEnd, restoreSession, signIn, signOut } from '../shared/api'
 import { Brand } from '../shared/ui/Brand'
 import { useAppRoute, viewRoute } from './routing'
 import { ThemeControl } from './theme/ThemeControl'
 import { useTheme } from './theme/useTheme'
 import './app.css'
 
-const demoKey = 'fluztech.demo-active'
-
-function startMode(): Mode | null {
-  return sessionStorage.getItem(demoKey) === 'yes' ? 'demo' : null
-}
-
 export default function App() {
-  const [mode, setMode] = useState(startMode)
-  const [restoring, setRestoring] = useState(mode !== 'demo')
+  const [authenticated, setAuthenticated] = useState(false)
+  const [restoring, setRestoring] = useState(true)
+  const [restoreError, setRestoreError] = useState('')
   const { route, navigate } = useAppRoute()
   const { dark, toggleTheme } = useTheme()
   const appearance = <ThemeControl dark={dark} onToggle={toggleTheme} />
 
   const showSignIn = useCallback(() => {
-    sessionStorage.removeItem(demoKey)
-    setMode(null)
+    setAuthenticated(false)
     navigate(viewRoute('sign-in'), true)
   }, [navigate])
 
@@ -32,36 +25,32 @@ export default function App() {
     if (!restoring) return
     let active = true
     restoreSession().then(restored => {
-      if (active && restored) setMode('live')
-    }).catch(() => {
-      // The sign-in form can retry if the backend is unavailable.
+      if (active && restored) setAuthenticated(true)
+    }).catch(error => {
+      if (!active || (error instanceof ApiError && error.status === 401)) return
+      setRestoreError(error instanceof ApiError && error.status === 0 ? error.message : 'Could not restore your session. Try signing in again.')
     }).finally(() => { if (active) setRestoring(false) })
     return () => { active = false }
   }, [restoring])
 
   useEffect(() => onSessionEnd(() => {
-    if (mode === 'live') showSignIn()
-  }), [mode, showSignIn])
+    if (authenticated) showSignIn()
+  }), [authenticated, showSignIn])
 
   if (restoring) return <main className="app session-loading" role="status"><Brand /><span>Opening workspace…</span></main>
 
-  if (!mode || route.view === 'sign-in') {
-    return <SignInPage brand={<Brand />} themeControl={appearance}
+  if (!authenticated || route.view === 'sign-in') {
+    return <SignInPage brand={<Brand />} themeControl={appearance} restoreError={restoreError}
       onSignIn={async (email, password) => {
+        setRestoreError('')
         await signIn(email, password)
-        sessionStorage.removeItem(demoKey)
-        setMode('live')
+        setAuthenticated(true)
         if (route.view === 'sign-in') navigate(viewRoute('board'), true)
-      }}
-      onDemo={() => {
-        sessionStorage.setItem(demoKey, 'yes')
-        setMode('demo')
-        navigate(viewRoute('board'), true)
       }}
     />
   }
 
-  return <WorkspacePage key={mode} mode={mode} route={route} navigate={navigate} appearance={appearance}
+  return <WorkspacePage route={route} navigate={navigate} appearance={appearance}
     onSignIn={showSignIn}
     onSignOut={signOut}
   />

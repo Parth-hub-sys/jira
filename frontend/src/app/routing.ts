@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { WorkFilters } from '../features/workspace'
+import { emptyWorkFilters } from '../features/workspace/model'
+import type { WorkFilters } from '../features/workspace/model'
 
 export const workspaceViews = ['overview', 'projects', 'board', 'list', 'members'] as const
 export type WorkspaceView = typeof workspaceViews[number]
 type View = WorkspaceView | 'sign-in'
 export type Route = { view: View; filters: WorkFilters; task: string }
 
-export const blankFilters: WorkFilters = { query: '', priority: '', status: '', label: '', mine: false }
-
-export function viewRoute(view: View, filters = blankFilters): Route {
+export function viewRoute(view: View, filters = emptyWorkFilters): Route {
   return { view, filters, task: '' }
 }
 
@@ -22,7 +21,7 @@ function readRoute(): Route {
     task: values.get('task') ?? '',
     filters: {
       query: values.get('q') ?? '', priority: values.get('priority') ?? '',
-      status: values.get('status') ?? '', label: values.get('label') ?? '', mine: values.get('mine') === '1',
+      status: values.get('status') ?? '', mine: values.get('mine') === '1',
     },
   }
 }
@@ -33,7 +32,6 @@ function hrefFor(route: Route) {
   if (route.filters.query) values.set('q', route.filters.query)
   if (route.filters.priority) values.set('priority', route.filters.priority)
   if (route.filters.status) values.set('status', route.filters.status)
-  if (route.filters.label) values.set('label', route.filters.label)
   if (route.filters.mine) values.set('mine', '1')
   return `#/${route.view}${values.size ? '?' + values : ''}`
 }

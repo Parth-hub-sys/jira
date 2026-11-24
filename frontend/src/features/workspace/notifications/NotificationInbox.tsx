@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react'
-import { Bell, Check, Volume2, VolumeX } from 'lucide-react'
+import { Bell, Check, CheckCheck, Volume2, VolumeX } from 'lucide-react'
 import { Dialog, Empty, FormError } from '../../../shared/ui'
 import { longDate, messageOf } from '../model'
 import type { Notice } from '../model'
-import type { Mode } from '../api'
 import { fetchNotifications, newestFirst, noticeTask, noticeTitle, notificationPageSize } from './model'
 
-export function NotificationInbox({ mode, unread, readUpdates, sound, onToggleSound, onOpen, onRead, onClose }: {
-  mode: Mode; unread: Notice[]; readUpdates: ReadonlyMap<string, Notice>; sound: boolean
-  onToggleSound(): void; onOpen(item: Notice): Promise<void>; onRead(item: Notice): Promise<Notice>; onClose(): void
+export function NotificationInbox({ unread, readUpdates, sound, onToggleSound, onOpen, onRead, onReadAll, onClose }: {
+  unread: Notice[]; readUpdates: ReadonlyMap<string, string>; sound: boolean
+  onToggleSound(): void; onOpen(item: Notice): Promise<void>; onRead(item: Notice): Promise<Notice>; onReadAll(): Promise<void>; onClose(): void
 }) {
   const [history, setHistory] = useState<Notice[]>([])
   const [offset, setOffset] = useState(0)
@@ -21,21 +20,24 @@ export function NotificationInbox({ mode, unread, readUpdates, sound, onToggleSo
 
   useEffect(() => {
     let active = true
-    fetchNotifications(mode, offset).then(rows => {
+    fetchNotifications(offset).then(rows => {
       if (!active) return
       setHistory(current => [...current, ...rows.slice(0, notificationPageSize)])
       setHasMore(rows.length > notificationPageSize)
     }).catch(failure => { if (active) setLoadError(messageOf(failure)) })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [mode, offset, attempt])
+  }, [offset, attempt])
 
   const oldest = history.at(-1)
   const entries = new Map(
     unread.filter(item => !hasMore || !oldest || newestFirst(item, oldest) <= 0).map(item => [item.id, item]),
   )
   for (const item of history) entries.set(item.id, item)
-  const items = Array.from(entries.values(), item => readUpdates.get(item.id) ?? item).sort(newestFirst)
+  const items = Array.from(entries.values(), item => {
+    const readAt = readUpdates.get(item.id)
+    return readAt ? { ...item, read_at: readAt } : item
+  }).sort(newestFirst)
 
   async function act(id: string, action: () => Promise<unknown>) {
     if (acting) return
@@ -50,9 +52,15 @@ export function NotificationInbox({ mode, unread, readUpdates, sound, onToggleSo
     <div className="drawer-body notice-inbox">
       <div className="notice-inbox-toolbar">
         <span className="muted">{unread.length > notificationPageSize ? `${notificationPageSize}+` : unread.length} unread</span>
-        <button type="button" className="button secondary notice-sound" aria-label="Notification sound" aria-pressed={sound} onClick={onToggleSound}>
-          {sound ? <Volume2 size={16} /> : <VolumeX size={16} />} Sound {sound ? 'on' : 'off'}
-        </button>
+        <div className="notice-inbox-actions">
+          <button type="button" className="button secondary notice-sound" disabled={!!acting || (!unread.length && !items.some(item => !item.read_at))}
+            onClick={() => void act('read-all', onReadAll)}>
+            <CheckCheck size={16} />{acting === 'read-all' ? 'Marking as read…' : 'Mark all as read'}
+          </button>
+          <button type="button" className="button secondary notice-sound" aria-label="Notification sound" aria-pressed={sound} onClick={onToggleSound}>
+            {sound ? <Volume2 size={16} /> : <VolumeX size={16} />} Sound {sound ? 'on' : 'off'}
+          </button>
+        </div>
       </div>
       <FormError error={error} />
       <FormError error={loadError} />

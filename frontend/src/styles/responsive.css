@@ -75,8 +75,6 @@
   .profile-trigger > svg { display: none; }
   .profile-trigger .avatar { width: 32px; height: 32px; }
   .search-trigger, .notification-button, .theme-toggle { width: 37px; min-width: 37px; height: 37px; }
-  .demo-tag { font-size: .77rem; padding: 0 3px; }
-  .demo-tag span { display: none; }
   .workspace-picker .dropdown-trigger { font-size: .83rem; }
   .project-picker .dropdown-trigger { max-width: min(180px,49vw); }
   .new-task { font-size: .83rem; padding-inline: 9px; }
@@ -91,9 +89,6 @@
   .overview-task { gap: 7px; }
   .row-info strong { font-size: .86rem; }
   .due-tile { width: 31px; height: 31px; }
-  .member-date { display: none; }
-  .member-row { gap: 7px; padding-inline: 2px; }
-  .member-row .avatar { width: 31px; height: 31px; }
   .project-grid { grid-template-columns: 1fr; }
   .filter-bar .input-icon { width: 100%; }
   .lane { flex-basis: min(290px,calc(100% - 30px)); }

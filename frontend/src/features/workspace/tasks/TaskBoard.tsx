@@ -3,19 +3,19 @@ import { createPortal } from 'react-dom'
 import { Ellipsis } from 'lucide-react'
 import { Dropdown } from '../../../shared/ui'
 import { statusNames, transitions } from '../model'
-import type { Label, Member, Status, Task } from '../model'
+import type { Member, Status, Task } from '../model'
 import { TaskCardContent } from './TaskCardContent'
 import { statusIcons } from './TaskIndicators'
 import { useBoardDrag } from './useBoardDrag'
 
 type Props = {
-  lanes: Status[]; tasks: Task[]; members: Member[]; labels: Label[]; canWrite: boolean
+  lanes: Status[]; tasks: Task[]; members: Member[]; canWrite: boolean
   isMoving(id: string): boolean
   openTask(id: string): void
   moveTask(task: Task, status: Status): void | Promise<void>
 }
 
-export function TaskBoard({ lanes, tasks, members, labels, canWrite, isMoving, openTask, moveTask }: Props) {
+export function TaskBoard({ lanes, tasks, members, canWrite, isMoving, openTask, moveTask }: Props) {
   const { boardRef, drag, startDrag, attachPreview } = useBoardDrag(moveTask)
   const assignee = (task: Task) => members.find(member => member.user_id === task.assignee_id)
 
@@ -43,7 +43,7 @@ export function TaskBoard({ lanes, tasks, members, labels, canWrite, isMoving, o
                   onPointerDown={event => {
                     if (canWrite && !saving) startDrag(event, task)
                   }}>
-                  <TaskCardContent task={task} assignee={assignee(task)} labels={labels} openTask={openTask} saving={saving}
+                  <TaskCardContent task={task} assignee={assignee(task)} openTask={openTask} saving={saving}
                     action={canWrite && <Dropdown className="card-menu" label={`Move ${task.title}`} leading={<Ellipsis size={18} />}
                       iconOnly disabled={saving} options={(transitions[task.status] ?? []).map(destination => {
                         const Icon = statusIcons[destination]
@@ -62,7 +62,7 @@ export function TaskBoard({ lanes, tasks, members, labels, canWrite, isMoving, o
     {drag && createPortal(
       <div className="board-drag-preview" ref={attachPreview} style={{ width: drag.width }} aria-hidden>
         <div className="board-card" data-status={drag.target ?? drag.task.status}>
-          <TaskCardContent task={drag.task} assignee={assignee(drag.task)} labels={labels} />
+          <TaskCardContent task={drag.task} assignee={assignee(drag.task)} />
         </div>
       </div>,
       document.body,

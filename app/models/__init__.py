@@ -5,6 +5,7 @@ from app.models.project import Project
 from app.models.project_member import ProjectMember
 from app.models.task import Task
 from app.models.comment import Comment
+# Retain historical label tables in Alembic metadata.
 from app.models.label import Label
 from app.models.task_label import TaskLabel
 from app.models.refresh_token import RefreshToken

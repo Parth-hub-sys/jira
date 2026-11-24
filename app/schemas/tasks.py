@@ -50,14 +50,12 @@ class TaskRecord(FromDatabase):
 
 class TaskRead(TaskRecord):
     key: str
-    label_ids: list[UUID]
 
     @classmethod
-    def from_task(cls, task: Task, project_key: str, label_ids: list[UUID]) -> "TaskRead":
+    def from_task(cls, task: Task, project_key: str) -> "TaskRead":
         return cls(
             **TaskRecord.model_validate(task).model_dump(),
             key=f"{project_key}-{task.number}",
-            label_ids=label_ids,
         )
 
 
@@ -71,20 +69,6 @@ class CommentRead(FromDatabase):
     author_id: UUID = Field(validation_alias=AliasChoices("author_id", "user_id"))
     body: str
     created_at: ISTDateTime
-
-
-class LabelWrite(Input):
-    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
-
-
-class LabelRead(FromDatabase):
-    id: UUID
-    project_id: UUID
-    name: str
-
-
-class TaskLabelsWrite(Input):
-    label_ids: Annotated[set[UUID], Field(max_length=100)]
 
 
 class ActivityRead(FromDatabase):

@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ApiError } from '../../shared/api'
 import { readWorkspace, request } from './api'
-import type { Mode } from './api'
 import { messageOf, transitions } from './model'
-import type { Label, Member, Organization, PendingTaskMove, Project, Role, Status, Task, User, Workspace } from './model'
+import type { Member, Organization, PendingTaskMove, Project, Role, Status, Task, User, Workspace } from './model'
 import type { ProjectValues, TaskValues } from './index'
 import type { OrganizationMemberInput } from './members/MemberForm'
 
-function savedSelection(mode: Mode) {
+const selectionKey = 'fluztech.selection.live'
+
+function savedSelection() {
   try {
-    const key = `fluztech.selection.${mode}`
-    const saved = sessionStorage.getItem(key) ?? sessionStorage.getItem(`relay.selection.${mode}`)
+    const saved = sessionStorage.getItem(selectionKey) ?? sessionStorage.getItem('relay.selection.live')
     if (saved) {
       const selection = JSON.parse(saved)
       return { organizationId: String(selection.organizationId ?? ''), projectId: String(selection.projectId ?? '') }
@@ -19,11 +19,11 @@ function savedSelection(mode: Mode) {
   return { organizationId: '', projectId: '' }
 }
 
-export function useWorkspace(mode: Mode, onExpired: () => void) {
+export function useWorkspace(onExpired: () => void) {
   const [savedWorkspace, setWorkspace] = useState<Workspace | null>(null)
   const [pendingMoves, setPendingMoves] = useState<ReadonlyMap<string, PendingTaskMove>>(() => new Map())
   const movingTasks = useRef(new Set<string>())
-  const [selection, setSelection] = useState(() => savedSelection(mode))
+  const [selection, setSelection] = useState(savedSelection)
   const [revision, setRevision] = useState(0)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -39,11 +39,11 @@ export function useWorkspace(mode: Mode, onExpired: () => void) {
     let active = true
     setLoading(true)
     setLoadError('')
-    readWorkspace(mode, selection.organizationId, selection.projectId).then(current => {
+    readWorkspace(selection.organizationId, selection.projectId).then(current => {
       if (!active) return
       setWorkspace(current)
       try {
-        sessionStorage.setItem(`fluztech.selection.${mode}`, JSON.stringify({
+        sessionStorage.setItem(selectionKey, JSON.stringify({
           organizationId: current.organization?.id ?? '',
           projectId: current.project?.id ?? '',
         }))
@@ -55,7 +55,7 @@ export function useWorkspace(mode: Mode, onExpired: () => void) {
       setLoadError(messageOf(error))
     }).finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [mode, selection, revision, onExpired])
+  }, [selection, revision, onExpired])
 
   const orgRole = workspace?.orgMembers.find(member => member.user_id === workspace.user.id)?.role
   const projectRole = workspace?.projectMembers.find(member => member.user_id === workspace.user.id)?.role
@@ -99,7 +99,7 @@ export function useWorkspace(mode: Mode, onExpired: () => void) {
   }
 
   async function updateProfile(name: string) {
-    const user = await request<User>(mode, '/users/me', { method: 'PATCH', data: { name } })
+    const user = await request<User>('/users/me', { method: 'PATCH', data: { name } })
     setWorkspace(current => {
       if (!current) return current
       const updateMember = (member: Member) => member.user_id === user.id ? { ...member, name: user.name } : member
@@ -121,7 +121,7 @@ export function useWorkspace(mode: Mode, onExpired: () => void) {
     movingTasks.current.add(task.id)
     setPendingMoves(current => new Map(current).set(task.id, { status, previous: task.status }))
     try {
-      const updated = await request<Task>(mode, `/tasks/${task.id}/transitions`, { method: 'POST', data: { status } })
+      const updated = await request<Task>(`/tasks/${task.id}/transitions`, { method: 'POST', data: { status } })
       updateTask(updated)
       return updated
     } finally {
@@ -136,20 +136,20 @@ export function useWorkspace(mode: Mode, onExpired: () => void) {
 
   async function createTask(values: TaskValues) {
     if (!workspace?.project) throw new Error('Choose a project first.')
-    const task = await request<Task>(mode, `/projects/${workspace.project.id}/tasks`, { method: 'POST', data: values })
+    const task = await request<Task>(`/projects/${workspace.project.id}/tasks`, { method: 'POST', data: values })
     updateTask(task)
     return task
   }
 
   async function createProject(values: ProjectValues) {
     if (!workspace?.organization) throw new Error('Choose an organization first.')
-    const project = await request<Project>(mode, `/organizations/${workspace.organization.id}/projects`, { method: 'POST', data: values })
+    const project = await request<Project>(`/organizations/${workspace.organization.id}/projects`, { method: 'POST', data: values })
     chooseProject(project.id)
     return project
   }
 
   async function createOrganization(name: string, slug: string) {
-    const organization = await request<Organization>(mode, '/organizations', { method: 'POST', data: { name, slug } })
+    const organization = await request<Organization>('/organizations', { method: 'POST', data: { name, slug } })
     chooseOrganization(organization.id)
     return organization
   }
@@ -157,7 +157,7 @@ export function useWorkspace(mode: Mode, onExpired: () => void) {
   async function addOrganizationMember(values: OrganizationMemberInput) {
     const orgId = workspace?.organization?.id
     if (!orgId) throw new Error('Choose an organization first.')
-    const member = await request<Member>(mode, `/organizations/${orgId}/members`, { method: 'POST', data: values })
+    const member = await request<Member>(`/organizations/${orgId}/members`, { method: 'POST', data: values })
     setWorkspace(current => current?.organization?.id === orgId ? {
       ...current, orgMembers: [...current.orgMembers.filter(item => item.user_id !== member.user_id), member]
         .sort((left, right) => left.name.localeCompare(right.name) || left.user_id.localeCompare(right.user_id)),
@@ -168,7 +168,7 @@ export function useWorkspace(mode: Mode, onExpired: () => void) {
     const scope = kind === 'project' ? workspace?.project : workspace?.organization
     if (!scope) throw new Error(`Choose a ${kind} first.`)
     const prefix = kind === 'project' ? 'projects' : 'organizations'
-    const member = await request<Member | undefined>(mode, `/${prefix}/${scope.id}/members/${encodeURIComponent(id)}`, role
+    const member = await request<Member | undefined>(`/${prefix}/${scope.id}/members/${encodeURIComponent(id)}`, role
       ? { method: 'PUT', data: { role } } : { method: 'DELETE' })
     if (!member || id === workspace?.user.id || role === 'viewer') {
       reload()
@@ -185,31 +185,11 @@ export function useWorkspace(mode: Mode, onExpired: () => void) {
     })
   }
 
-  function upsertLabel(label: Label) {
-    setWorkspace(current => current?.project?.id === label.project_id ? {
-      ...current, labels: [...current.labels.filter(item => item.id !== label.id), label].sort((a, b) => a.name.localeCompare(b.name)),
-    } : current)
-  }
-
-  function removeLabel(projectId: string, id: string) {
-    setWorkspace(current => current?.project?.id === projectId ? {
-      ...current,
-      labels: current.labels.filter(label => label.id !== id),
-      tasks: current.tasks.map(task => task.label_ids.includes(id) ? { ...task, label_ids: task.label_ids.filter(label => label !== id) } : task),
-    } : current)
-  }
-
-  function updateTaskLabels(task: Task, labels: Label[]) {
-    setWorkspace(current => current?.project?.id === task.project_id ? {
-      ...current, tasks: current.tasks.map(item => item.id === task.id ? { ...item, label_ids: labels.map(label => label.id) } : item),
-    } : current)
-  }
-
   return {
     workspace, loading, loadError, manageOrg, manageProject, canWrite, pendingMoves, chooseProject, chooseOrganization,
     organizationPickerId: loading && workspace?.organizations.some(item => item.id === selection.organizationId)
       ? selection.organizationId : workspace?.organization?.id,
     reload, createTask, createProject, moveTask, updateTask, updateProfile, updateOrganization, updateProject, changeMember,
-    upsertLabel, removeLabel, updateTaskLabels, createOrganization, addOrganizationMember,
+    createOrganization, addOrganizationMember,
   }
 }
