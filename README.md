@@ -12,7 +12,7 @@ uv sync --locked
 From `D:\jira`, run the command below and keep this terminal open.
 
 ```powershell
-uv run uvicorn main:app --reload --port 8000 --timeout-graceful-shutdown 5
+uv run uvicorn main:app --reload
 ```
 
 - [Swagger API docs](http://127.0.0.1:8000/docs)
